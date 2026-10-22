@@ -1,0 +1,19 @@
+{
+  "_comment": "Baseline strategy. Edit + push to main and Railway redeploys. The in-bot strategist adjusts these within bounds every ~4h unless a key is listed in lock. See ctnbot/strategy.py for the allowed keys and ranges.",
+  "target_active_accounts": 15,
+  "share_top_level": 0.15,
+  "extra_mentions_per_reply": 2,
+  "mentions_per_post": 4,
+  "boost_likes_per_post": 2,
+  "min_report_confidence": 0.85,
+  "max_pending_reports": 24,
+  "reply_fresh_seconds": 300,
+  "smart_reply_min_persuadable": 0.55,
+  "stance_weights": {"-2": 0.2, "-1": 1.0, "0": 1.0, "1": 0.55, "2": 0.1},
+  "argument_weights": {},
+  "persona_weights": {},
+  "concern_weights": {},
+  "style_notes": [],
+  "avoid_phrases": ["Your worry about", "I hear you", "Vote YES", "Mandate now"],
+  "lock": ["min_report_confidence"]
+}

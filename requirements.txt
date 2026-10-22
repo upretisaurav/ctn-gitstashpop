@@ -1,0 +1,2 @@
+capturethenarrative>=0.5.1
+anthropic>=1.0

@@ -1,0 +1,9 @@
+.env
+*.sqlite3*
+*.log
+*.log.*
+accounts_backup.csv
+research/
+__pycache__/
+.venv/
+.pytest_cache/
