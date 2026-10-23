@@ -99,6 +99,7 @@ def main() -> None:
         raise KeyboardInterrupt
 
     signal.signal(signal.SIGTERM, _stop)
+    _maybe_health_server()
 
     def _flush_errors():
         bot.db.put("recent_errors", list(RECENT_ERRORS))
@@ -109,6 +110,28 @@ def main() -> None:
     except KeyboardInterrupt:
         logging.getLogger("ctnbot").info("stopping cleanly")
         _flush_errors()
+
+
+def _maybe_health_server() -> None:
+    """If the host gives us a PORT (e.g. a Render/Railway web service), answer health checks on it."""
+    import os
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    port = os.environ.get("PORT")
+    if not port:
+        return
+
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("0.0.0.0", int(port)), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
 
 
 def check(cfg: Config) -> None:

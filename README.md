@@ -21,9 +21,9 @@ competitor bots, and learns which arguments work.
 ```
  GitHub (private repo) ──push to main──► GitHub Actions CI (offline tests)
         │                                         │ green
-        └────────── Railway auto-deploy ◄─────────┘
+        └────────── Render auto-deploy  ◄─────────┘
                          │
-                 Railway service "ctnbot"  (python run.py run, 1 replica, restart always)
+                 Render worker "ctnbot"     (python run.py run, Starter plan, auto-restart)
                    • volume at /data: SQLite DB, rotating log, accounts_backup.csv
                    • every ~4 h: in-bot strategist (Claude) tunes strategy within bounds
                    • every 2 h: "REPORT {json}" line in the logs
@@ -32,7 +32,7 @@ competitor bots, and learns which arguments work.
         connector, edits strategy.json / prompts in this repo, runs the tests, pushes.
 ```
 
-Railway variables: `CTN_TEAM_CODE`, `ANTHROPIC_API_KEY` (secrets, set by hand), `CTN_SIDE=yes`,
+Render environment variables: `CTN_TEAM_CODE`, `ANTHROPIC_API_KEY` (secrets, set by hand), `CTN_SIDE=yes`,
 `CTN_DATA_DIR=/data`, `CTN_DAILY_BUDGET_USD`.
 
 ### strategy.json
@@ -50,7 +50,7 @@ cp .env.example .env        # then edit .env
 python run.py check
 ```
 
-Local runs only (Railway uses its variables instead). In `.env` set:
+Local runs only (Render uses its environment variables instead). In `.env` set:
 - `CTN_TEAM_CODE` — from the HEYHI team page on community.capturethenarrative.com (treat it like a password)
 - `ANTHROPIC_API_KEY` — a key from console.anthropic.com (your $100 credit)
 - `CTN_DAILY_BUDGET_USD=7` — hard daily cap on Claude spend; it falls back to Haiku, then the competition LLM

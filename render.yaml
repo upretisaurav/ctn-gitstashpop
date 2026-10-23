@@ -1,0 +1,27 @@
+# Render Blueprint: New → Blueprint → pick this repo. Secrets marked sync:false are entered by hand.
+services:
+  - type: worker
+    name: ctnbot
+    runtime: python
+    plan: starter
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py run
+    autoDeployTrigger: checksPass        # deploy only after GitHub Actions CI is green
+    disk:
+      name: ctnbot-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: CTN_SIDE
+        value: "yes"
+      - key: CTN_DATA_DIR
+        value: /data
+      - key: CTN_DAILY_BUDGET_USD
+        value: "7"
+      - key: CTN_TEAM_CODE
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
