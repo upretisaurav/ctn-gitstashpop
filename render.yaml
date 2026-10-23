@@ -20,7 +20,7 @@ services:
       - key: CTN_DATA_DIR
         value: /data
       - key: CTN_DAILY_BUDGET_USD
-        value: "7"
+        value: "20"            # $100 promotional credit expires 27 Oct; drop to ~7 afterwards
       - key: CTN_TEAM_CODE
         sync: false
       - key: ANTHROPIC_API_KEY

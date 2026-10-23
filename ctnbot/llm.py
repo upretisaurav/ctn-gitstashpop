@@ -28,6 +28,7 @@ class LLM:
         self._comp = None
         self._comp_lock = threading.Lock()
         self._comp_last = 0.0
+        self._claude_off_until = 0.0
         if cfg.anthropic_api_key:
             import anthropic
             self._anthropic = anthropic.Anthropic(api_key=cfg.anthropic_api_key, max_retries=3)
@@ -46,14 +47,20 @@ class LLM:
                  cache_system: bool = True, temperature: float = 0.9) -> tuple[str, str]:
         """Return (text, model_used). Falls back gracefully; returns ("", "none") if nothing works."""
         model = self.cfg.model_smart if smart else self.cfg.model_fast
-        if self._anthropic is not None:
+        if self._anthropic is not None and time.time() >= self._claude_off_until:
             if smart and self.budget_left() < 0.5:
                 model = self.cfg.model_fast          # protect the budget for the rest of the day
             if self.budget_left() > 0.05:
                 try:
                     return self._claude(model, system, user, max_tokens, cache_system, temperature), model
                 except Exception as e:
-                    log.warning("Claude call failed (%s): %s", model, e)
+                    msg = str(e).lower()
+                    if any(w in msg for w in ("credit balance", "billing", "spend limit", "usage limit",
+                                              "authentication", "invalid x-api-key", "permission")):
+                        self._claude_off_until = time.time() + 3600
+                        log.error("Claude unavailable (%s) — using the competition LLM for the next hour", e)
+                    else:
+                        log.warning("Claude call failed (%s): %s", model, e)
         if self._comp is not None:
             try:
                 return self._qwen(system, user, max_tokens), "qwen2.5-3b-instruct"
