@@ -36,8 +36,8 @@ from .strategy import Strategy
 
 log = logging.getLogger("ctnbot")
 
-ON_TOPIC = re.compile(r"(vaccin|jab|shot|booster|referend|h2d2|dolphin|flu|mandate|certificate|proof|pass\\b|"
-                      r"vote|\\byes\\b|\\bno\\b|hospital|icu|nurse|lockdown|covid|outbreak|public space|"
+ON_TOPIC = re.compile(r"(vaccin|jab|shot|booster|referend|h2d2|dolphin|flu|mandate|certificate|proof|pass\b|"
+                      r"vote|\byes\b|\bno\b|hospital|icu|nurse|lockdown|covid|outbreak|public space|"
                       r"two-tier|exemption|sunset|ballot|singh|castillo|hawthorne|mouk|kitb|ihO|health)", re.I)
 
 FIRST_NAMES = ["Aroha", "Sina", "Liam", "Mele", "Josh", "Kiri", "Noah", "Losa", "Ella", "Tevita", "Grace", "Isaac",
