@@ -29,8 +29,29 @@ def build_report(db, strategy=None, hours: float = 24.0, samples: int = 6) -> di
     kinds = {r["kind"]: {"n": r["n"], "avg_replies": round(r["ar"] or 0, 3), "avg_likes": round(r["al"] or 0, 3)}
              for r in db.all("""SELECT kind, COUNT(*) n, AVG(npc_replies) ar, AVG(npc_likes) al FROM our_posts
                                 WHERE created_at > ? AND checked_at > 0 GROUP BY kind""", (since,))}
+    # Recent breakdowns (last 6 h of scored posts) so reviews can judge a change soon after it deploys:
+    # by kind+model (e.g. Sonnet vs Haiku writing) and by the target citizen's stance (who pushes back).
+    recent = time.time() - 6 * 3600
+
+    def breakdown(group_sql: str, join: str = "") -> dict:
+        rows = db.all(f"""SELECT {group_sql} g, COUNT(*) n, AVG(o.npc_replies) ar, AVG(o.npc_likes) al,
+                                 SUM(CASE WHEN o.shift_score > 0.2 THEN 1 ELSE 0 END) pos,
+                                 SUM(CASE WHEN o.shift_score < -0.2 THEN 1 ELSE 0 END) neg
+                          FROM our_posts o {join} WHERE o.created_at > ? AND o.checked_at > 0
+                          GROUP BY g ORDER BY n DESC LIMIT 12""", (recent,))
+        return {str(r["g"]): {"n": r["n"], "avg_replies": round(r["ar"] or 0, 3), "avg_likes": round(r["al"] or 0, 3),
+                              "pos": r["pos"] or 0, "neg": r["neg"] or 0} for r in rows}
+
+    try:
+        recent_6h = {"by_kind_model": breakdown("o.kind || '/' || COALESCE(o.model, '?')"),
+                     "by_target_stance": breakdown("o.kind || '/' || COALESCE(a.stance, 'none')",
+                                                   "LEFT JOIN accounts a ON a.account_id = o.target_id")}
+    except Exception as e:                       # diagnostics must never break the report
+        recent_6h = {"error": str(e)[:200]}
+
     rep = {
         "at": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+        "recent_6h": recent_6h,
         "window_hours": hours,
         "accounts": {"active": g("SELECT COUNT(*) FROM our_accounts WHERE status='active'"),
                      "total": g("SELECT COUNT(*) FROM our_accounts"),
@@ -66,7 +87,7 @@ def build_report(db, strategy=None, hours: float = 24.0, samples: int = 6) -> di
     return rep
 
 
-def compact(rep: dict, limit: int = 15000) -> str:
+def compact(rep: dict, limit: int = 18000) -> str:
     """One-line JSON for logs; trims samples if too long."""
     text = json.dumps(rep, separators=(",", ":"), default=str)
     if len(text) > limit:

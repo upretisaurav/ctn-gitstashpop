@@ -111,7 +111,9 @@ def test_full_loop_in_simulator():
         assert s["reports_pending"] >= 1, s
         assert bot.db.one("SELECT COUNT(*) c FROM posts")["c"] > 50
         from ctnbot.report import build_report, compact
-        assert len(compact(build_report(bot.db, bot.strategy))) > 200
+        rep = build_report(bot.db, bot.strategy)
+        assert len(compact(rep)) > 200
+        assert "error" not in rep["recent_6h"], rep["recent_6h"]
 
 
 def test_drafts_in_parallel_keep_write_slots_full():
