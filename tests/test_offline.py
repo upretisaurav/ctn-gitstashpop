@@ -91,7 +91,10 @@ def test_strategist_respects_bounds_and_locks():
         changes = bot.strategist.run()
         assert changes["share_top_level"] == 0.4
         assert "made_up_arg" not in changes["argument_weights"]
-        assert bot.strategy["min_report_confidence"] == 0.85     # locked in strategy.json
+        import json
+        from ctnbot.strategy import REPO_FILE
+        repo_conf = json.loads(REPO_FILE.read_text())["min_report_confidence"]
+        assert bot.strategy["min_report_confidence"] == repo_conf     # locked in strategy.json
         assert "Keep it short." in bot.writer.system
 
 

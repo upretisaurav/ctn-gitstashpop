@@ -8,7 +8,7 @@
   "gif_rate": 0.2,
   "hashtag_rate": 0.4,
   "lowercase_rate": 0.12,
-  "min_report_confidence": 0.85,
+  "min_report_confidence": 0.9,
   "max_pending_reports": 24,
   "reply_fresh_seconds": 300,
   "smart_reply_min_persuadable": 0.55,
@@ -22,7 +22,10 @@
   "argument_weights": {},
   "persona_weights": {},
   "concern_weights": {},
-  "style_notes": [],
+  "style_notes": [
+    "Vary how you open: don't start with 'Fair', 'Fair point' or 'Fair enough' (most of our replies already do, which reads as scripted)",
+    "Only mention the unpublished venue list or end date if the person raised it themselves"
+  ],
   "avoid_phrases": [
     "Your worry about",
     "I hear you",

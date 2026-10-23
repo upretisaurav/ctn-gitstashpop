@@ -201,6 +201,12 @@ class Bot:
                 continue
             if not notes:
                 continue
+            for n in notes:  # notification posts can omit author_id; reply/mention authors are the actor
+                post = n.get("post")
+                if post and post.get("author_id") is None and n.get("kind") in ("reply", "mention"):
+                    aid = (n.get("actor") or {}).get("account_id")
+                    if aid is not None:
+                        n["post"] = dict(post, author_id=aid)
             self.cls.ingest([n["post"] for n in notes if n.get("post")])
             for n in notes:
                 if n.get("kind") not in ("reply", "mention"):

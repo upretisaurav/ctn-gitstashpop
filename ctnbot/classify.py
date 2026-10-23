@@ -40,6 +40,15 @@ STATS = re.compile(r"(30 icu|thirty icu|120,000|40 (nursing|empty|unfilled)|fort
                    r"1,000 (deaths|kingstonians)|51\.28)", re.I)
 
 
+
+def _author_of(p: dict):
+    """Author id of a post dict; some API payloads nest it as author/account objects."""
+    a = p.get("author_id")
+    if a is None:
+        au = p.get("author") or p.get("account")
+        a = au.get("account_id") if isinstance(au, dict) else au
+    return a if isinstance(a, int) else None
+
 class Classifier:
     def __init__(self, cfg, db, platform, llm):
         self.cfg = cfg
@@ -59,6 +68,9 @@ class Classifier:
         for p in posts:
             if not p or "post_id" not in p:
                 continue
+            a = _author_of(p)
+            if a is None:  # e.g. trimmed post objects inside notifications
+                continue
             row = self.db.one("SELECT post_id FROM posts WHERE post_id=?", (p["post_id"],))
             if row:
                 continue
@@ -71,9 +83,8 @@ class Classifier:
                     depth = parent["depth"] + 1
             self.db.x("""INSERT OR IGNORE INTO posts(post_id,author_id,kind,body,reply_to,root_id,repost_of,
                          created_at,seen_at,depth) VALUES(?,?,?,?,?,?,?,?,?,?)""",
-                      (p["post_id"], p["author_id"], p.get("kind"), p.get("body"), p.get("reply_to_post_id"),
+                      (p["post_id"], a, p.get("kind"), p.get("body"), p.get("reply_to_post_id"),
                        p.get("root_post_id"), p.get("repost_of_post_id"), ts(p.get("created_at")), now, depth))
-            a = p["author_id"]
             self.db.x("""INSERT INTO accounts(account_id, first_seen, last_post_at, posts_seen) VALUES(?,?,?,1)
                          ON CONFLICT(account_id) DO UPDATE SET posts_seen=posts_seen+1,
                          last_post_at=MAX(COALESCE(last_post_at,0), excluded.last_post_at)""",
