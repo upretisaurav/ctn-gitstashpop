@@ -198,7 +198,10 @@ class Classifier:
             elif llm_npc is None:
                 npc, src = h["score"], "heuristic"
             else:
-                npc, src = 0.6 * llm_npc + 0.4 * h["score"], "llm"
+                # The LLM reads the actual posts, so it leads; heuristics nudge. With the old 60/40 split a
+                # post-launch account with no heuristic red flags could never score below 0.2, so the
+                # blue team (which needs <= 1 - min_report_confidence) never fired.
+                npc, src = 0.8 * llm_npc + 0.2 * h["score"], "llm"
             concerns = [c for c in (o.get("concerns") or []) if c in CONCERNS][:3]
             self.db.x("""UPDATE accounts SET npc_score=?, npc_source=?, stance=?, stance_vacc=?, stance_yearly=?,
                          side_pushed=?, concerns=?, identity=?, persuadable=?, classified_at=? WHERE account_id=?""",

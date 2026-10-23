@@ -419,7 +419,9 @@ class Bot:
             return self.do_life_post(row)
         arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for([concern]),
                                  weights=self.strategy["argument_weights"])
-        news = random.choice(self.news) if self.news and random.random() < 0.5 else None
+        relevant = [a for a in self.news
+                    if ON_TOPIC.search(f"{a.get('title', '')} {a.get('summary') or a.get('excerpt') or ''}")]
+        news = random.choice(relevant) if relevant and random.random() < 0.5 else None
         text, model = self.writer.top_level(persona_key=row["persona_key"], display_name=row["display_name"],
                                             argument=arg, news=news, audience_concern=CONCERNS[concern])
         if not text:
@@ -561,7 +563,11 @@ class Bot:
             return
         row = self.pick_account()
         if row is not None and self.limits.report_post.available():
-            self.blue.report_some(row, max_reports=1)
+            made = self.blue.report_some(row, max_reports=1)
+            if not made and time.time() - getattr(self, "_blue_note", 0) > 900:
+                self._blue_note = time.time()
+                log.info("blue: no report this round (candidates=%d, pending=%d, blocked=%s)",
+                         len(self.blue.candidates(limit=50)), self.blue.pending_count(), self.blue.blocked())
 
     def blue_accounts_tick(self) -> None:
         if self.cfg.observe_only or not self.can_write():
