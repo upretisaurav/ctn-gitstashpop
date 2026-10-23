@@ -659,6 +659,8 @@ class Bot:
     # ---- extra reach (likes and follows have their own budgets, separate from writes) -------------------
     def _engage(self, row, job) -> None:
         """Like the post we just answered, and follow citizens who keep talking with us (they may follow back)."""
+        if row["account_id"] in self._exposed():
+            return
         target_post = job.get("target_post_id") or (job.get("target") or {}).get("post_id")
         if target_post and random.random() < self.strategy["like_reply_targets"]:
             self._later(random.uniform(5, 45), self._quiet_like, dict(row), target_post)
@@ -730,10 +732,16 @@ class Bot:
         n = self.cfg.life_post_every
         return n > 0 and row["posts_made"] > 0 and row["posts_made"] % n == n - 1
 
+    def _exposed(self) -> set:
+        """Accounts with a moderator-hidden post: one account report away from suspension at 100 actions,
+        so they only spend actions on posts that earn points, never on likes, follows or reports."""
+        return {r["account_id"] for r in self.db.all(
+            "SELECT DISTINCT account_id FROM our_posts WHERE status='hidden'")}
+
     def _boost_like(self, post_id, author_account_id) -> None:
         if not post_id or post_id >= 9_000_000_000:
             return
-        row = self.pick_account(exclude={author_account_id})
+        row = self.pick_account(exclude={author_account_id} | self._exposed())
         if row is not None:
             try:
                 self.p.like(row, post_id)
@@ -838,7 +846,7 @@ class Bot:
     def blue_tick(self) -> None:
         if self.cfg.observe_only or not self.can_write():
             return
-        row = self.pick_account()
+        row = self.pick_account(exclude=self._exposed())
         if row is not None and self.limits.report_post.available():
             made = self.blue.report_some(row, max_reports=1)
             if not made and time.time() - getattr(self, "_blue_note", 0) > 900:
@@ -849,7 +857,7 @@ class Bot:
     def blue_accounts_tick(self) -> None:
         if self.cfg.observe_only or not self.can_write():
             return
-        row = self.pick_account()
+        row = self.pick_account(exclude=self._exposed())
         if row is not None:
             self.blue.report_accounts(row, max_reports=2)
 

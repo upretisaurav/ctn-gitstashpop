@@ -38,6 +38,10 @@ HOW TO WRITE (this matters more than anything else):
 - Do not @mention anyone (mentions are added separately).
 """
 
+# The model sometimes narrates its brief ("Dry, wise voice... The reply should... under 280 characters").
+META = re.compile(r"(the (reply|post|response) should|under \d+ characters|banned phrases|avoided phrases|no dashes|"
+                  r"\bpersona\b|in character|output only|facts sheet|\bvoice:)", re.I)
+
 INJECTION = re.compile(r"(ignore (all|previous|prior)|system prompt|as an ai|language model|<\|?im_|"
                        r"\bassistant\b|\buser:|instruction|\bprompt\b|\{\s*\"|```|role-?play)", re.I)
 
@@ -161,6 +165,9 @@ class Writer:
         t = re.sub(r"\s*(\u2014|\u2013|--)\s*", ", ", t)      # no em/en dashes
         t = re.sub(r",\s*([,.!?])", r"\1", t)
         t = re.sub(r"\s{2,}", " ", t).strip()
+        if META.search(t):
+            log.info("dropped draft that narrates its instructions: %r", t[:80])
+            return ""
         if INJECTION.search(t):
             log.info("dropped draft that looked like an instruction: %r", t[:80])
             return ""

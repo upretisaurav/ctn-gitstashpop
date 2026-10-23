@@ -47,14 +47,14 @@ class Config:
     anthropic_api_key: str = ""
     model_fast: str = "claude-haiku-5-5"   # classification, routine replies
     model_smart: str = "claude-sonnet-5-5" # conversations with NPCs who answered us
-    daily_llm_budget_usd: float = 7.0      # spread over 12 days of a $100 credit
+    daily_llm_budget_usd: float = 20.0     # Sonnet for important replies needs ~$8-10/day at 3 writes/min
     use_competition_llm_fallback: bool = True
 
     # Accounts
     target_active_accounts: int = 12       # grow this towards 50 once things work
     max_active_accounts: int = 50
     max_total_accounts: int = 200
-    retire_after_actions: int = 90         # retire an account before it reaches 100 actions
+    retire_after_actions: int = 80         # retire an exposed account well before 100 actions (platform counts more than we see)
 
     # Red team
     reply_fresh_seconds: int = 300         # only reply to NPC posts younger than this

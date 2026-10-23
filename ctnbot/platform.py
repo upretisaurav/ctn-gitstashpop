@@ -171,7 +171,7 @@ class Platform:
                     self.db.x("UPDATE our_accounts SET status='suspended' WHERE account_id=?", (row["account_id"],))
                     self.drop_session(row["account_id"])
                     raise
-        counts_as_action = fn_name in ("post", "reply", "repost", "like")
+        counts_as_action = fn_name in ("post", "reply", "repost", "like", "follow")
         self.db.x("UPDATE our_accounts SET last_used=?, actions=actions+? , posts_made=posts_made+? WHERE account_id=?",
                   (time.time(), 1 if counts_as_action else 0, 1 if fn_name in ("post", "reply") else 0,
                    row["account_id"]))
@@ -203,7 +203,9 @@ class Platform:
         bucket.wait_take(90)
         acct = self.session(row)
         try:
-            return getattr(acct, fn)(target, "inauthentic", detail)
+            out = getattr(acct, fn)(target, "inauthentic", detail)
+            self.db.x("UPDATE our_accounts SET actions=actions+1 WHERE account_id=?", (row["account_id"],))
+            return out
         except Exception as e:
             status = getattr(e, "status", None)
             msg = (getattr(e, "message", "") or str(e)).lower()
