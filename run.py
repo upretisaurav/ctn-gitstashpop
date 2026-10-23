@@ -51,7 +51,7 @@ def setup_logging(cfg: Config) -> None:
         pass
     eb = _ErrorBuffer(level=logging.WARNING)
     root.addHandler(eb)
-    for noisy in ("httpx", "anthropic", "openai", "urllib3"):
+    for noisy in ("httpx", "httpx2", "httpcore", "anthropic", "openai", "urllib3"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 

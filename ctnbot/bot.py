@@ -16,6 +16,7 @@ import json
 import logging
 import math
 import random
+import re
 import time
 from typing import Callable, Optional
 
@@ -34,6 +35,10 @@ from .strategist import Strategist
 from .strategy import Strategy
 
 log = logging.getLogger("ctnbot")
+
+ON_TOPIC = re.compile(r"(vaccin|jab|shot|booster|referend|h2d2|dolphin|flu|mandate|certificate|proof|pass\\b|"
+                      r"vote|\\byes\\b|\\bno\\b|hospital|icu|nurse|lockdown|covid|outbreak|public space|"
+                      r"two-tier|exemption|sunset|ballot|singh|castillo|hawthorne|mouk|kitb|ihO|health)", re.I)
 
 FIRST_NAMES = ["Aroha", "Sina", "Liam", "Mele", "Josh", "Kiri", "Noah", "Losa", "Ella", "Tevita", "Grace", "Isaac",
                "Mia", "Pita", "Zoe", "Ruby", "Hemi", "Talia", "Jack", "Anahera", "Luke", "Nina", "Viliami", "Chloe",
@@ -384,8 +389,9 @@ class Bot:
         fresh = math.exp(-age / 150.0)
         depth_w = 1.0 if (r["depth"] in (0, None)) else max(0.3, 1 - 0.1 * r["depth"])
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
+        on_topic = 1.0 if ON_TOPIC.search(r["body"] or "") else 0.15     # don't hijack footy posts
         return (r["npc_score"] or 0) * (r["persuadable"] if r["persuadable"] is not None else 0.5 + 0.0) * \
-            stance_w * concern_w * fresh * depth_w * trending + 0.01
+            stance_w * concern_w * fresh * depth_w * trending * on_topic + 0.01
 
     # ---- 3. top-level posts ----------------------------------------------
     def do_top_level(self) -> bool:
