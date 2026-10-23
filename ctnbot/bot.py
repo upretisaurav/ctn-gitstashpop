@@ -545,8 +545,9 @@ class Bot:
             return {"kind": "life", "row": dict(row)}
         arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for(concerns),
                                  weights=self.strategy["argument_weights"])
-        smart = (r["stance"] in (-1, 0, None)) and \
-            (r["persuadable"] or 0.5) >= self.strategy["smart_reply_min_persuadable"]
+        smart = (random.random() < self.strategy["smart_all_writing"]) or (
+            (r["stance"] in (-1, 0, None)) and
+            (r["persuadable"] or 0.5) >= self.strategy["smart_reply_min_persuadable"])
         target = {"post_id": r["post_id"], "root_post_id": r["root_id"], "body": r["body"],
                   "reply_to_post_id": r["reply_to"], "author_id": r["author_id"]}
         return {"kind": "reply", "row": dict(row), "r": dict(r), "target": target, "concerns": concerns,
@@ -627,7 +628,8 @@ class Bot:
     def compose_top_level(self, job):
         row, news = job["row"], job.get("news")
         text, model = self.writer.top_level(persona_key=row["persona_key"], display_name=row["display_name"],
-                                            argument=job["arg"], news=news, audience_concern=CONCERNS[job["concern"]])
+                                            argument=job["arg"], news=news, audience_concern=CONCERNS[job["concern"]],
+                                            smart=random.random() < self.strategy["smart_all_writing"])
         if not text:
             return None
         if NO_TALKING_POINTS.search(text):

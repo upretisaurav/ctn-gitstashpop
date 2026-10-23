@@ -36,6 +36,8 @@
     "Mandate now"
   ],
   "lock": [
-    "min_report_confidence"
-  ]
+    "min_report_confidence",
+    "smart_all_writing"
+  ],
+  "smart_all_writing": 1.0
 }

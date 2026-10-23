@@ -51,3 +51,11 @@ the slot for a fresh first-touch reply. Continuations to people who are neutral 
 Expect by ~22:30 UTC: continuation count down ~40-60%, first-touch replies up by the same; negative_shift growth per
 hour down ~30%; positive >= negative in the 25-min learn lines. NPC replies/hour may dip slightly (continuations had the
 best reply rate, 0.3/post). If replies/h fall >25% with no shift gain, raise CONTINUE_MIN_SHIFT to -0.7.
+
+## 2026-10-24 08:20 Adelaide (Fri 21:50 UTC): Sonnet for all writing (manual, with Saurav)
+The $100 promotional API credit expires 27 Oct and would otherwise go unused, so all replies and standalone posts now use
+Sonnet (new knob smart_all_writing = 1.0, locked). Life posts, classification and judging stay on Haiku.
+Estimated spend ~$15-18/day at 3 writes/min (daily cap CTN_DAILY_BUDGET_USD = 20; smart calls fall back to Haiku when
+under $0.50 is left). Saurav tops up paid credit on Mon 26 Oct.
+Expect: likes/replies per post and positive-vs-negative shift on Haiku-written posts (POST lines were Haiku) to improve.
+Compare by model in the REPLY/POST log lines. If shift and engagement per post don't improve within ~6 h, set it back to 0.

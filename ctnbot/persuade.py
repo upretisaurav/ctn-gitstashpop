@@ -117,7 +117,7 @@ class Writer:
         return self.clean(text), model
 
     def top_level(self, *, persona_key: str, display_name: str, argument: str, news: Optional[dict],
-                  audience_concern: str) -> tuple[str, str]:
+                  audience_concern: str, smart: bool = False) -> tuple[str, str]:
         hook = ""
         if news:
             hook = (f"Today's news you can react to: \"{news.get('title')}\" ({news.get('site', {}).get('name', '')}). "
@@ -130,7 +130,7 @@ class Writer:
                 f"do NOT bring up the No side's talking points (the unpublished venue list, no end date or sunset "
                 f"clause, 'blank cheque'). People who haven't heard them shouldn't hear them from you. "
                 f"Output only the post text.")
-        text, model = self.llm.complete(self.system, user, smart=False, max_tokens=260)
+        text, model = self.llm.complete(self.system, user, smart=smart, max_tokens=260)
         return self.clean(text), model
 
     def life_post(self, *, persona_key: str, display_name: str) -> tuple[str, str]:
