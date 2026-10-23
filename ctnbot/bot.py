@@ -355,6 +355,7 @@ class Bot:
     # moment a write slot opens. Before this, every write waited ~25 s on the LLM, so we used ~2 of the
     # 3 writes a minute the team is allowed.
     KIND_ORDER = {"continuation": 0, "reply": 1, "post": 2, "life": 3}
+    CONTINUE_MIN_SHIFT = -0.4      # skip a continuation when their answer to us reads at or below this
 
     def write_slot(self) -> None:
         self._harvest_drafts()
@@ -496,6 +497,14 @@ class Bot:
         if depth is not None and depth >= self.cfg.max_thread_depth:
             return None
         ours = self.db.one("SELECT body FROM our_posts WHERE post_id=?", (full.get("reply_to_post_id"),))
+        # Arguing on with someone who is pushing back mostly gets the No case restated at us (and risks moving them
+        # further away, -80). Continuations to pushback scored 4 up vs 11 down; first-touch replies 23 vs 14. So
+        # leave pushback alone, rest them from targeting for a while, and spend the write slot on someone new.
+        shift, _ = self.writer.judge_shift(ours["body"] if ours else "", full.get("body") or "")
+        if shift <= self.CONTINUE_MIN_SHIFT:
+            self.db.x("UPDATE accounts SET last_targeted=? WHERE account_id=?", (time.time(), actor))
+            log.info("skip continuation with %s: pushing back (shift %.2f)", actor, shift)
+            return None
         text, model = self.writer.continuation(
             persona_key=row["persona_key"], display_name=row["display_name"],
             our_post=(ours["body"] if ours else ""), their_reply=full.get("body") or "",

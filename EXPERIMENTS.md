@@ -33,3 +33,21 @@ Changed (code, not strategy.json, so the strategist overlay can't undo it):
 - Continuation prompt: answer a new doubt with a reason for Yes without restating it.
 Expect by ~18:30 UTC (posts after ~14:35 UTC): negative-shift share of scored posts down (aim positive >= 0.6x negative on
 new posts, from 0.35x); reply/like rates unchanged or slightly lower. If replies per post fall >30% with no shift gain, soften.
+
+## 2026-10-24 04:50 Adelaide (Fri 18:20 UTC): stop continuing threads with citizens who push back
+Saw (14:32->18:13 UTC, 3.7 h after the 14:31 deploy): posting steady ~3/min (STATUS posts_24h +29-30 per 10 min);
+24 h rolling: 2,303 posts, 321 NPC replies (+66 in window), 796 likes (+217), 7 hidden (unchanged), 0 suspended,
+positive_shift 48 vs negative_shift 116 (in-window +13 vs +18; strategist's 4 h view 26 vs 53). Reports 53 inauthentic /
+5 genuine (2 new genuine at ~16:20 UTC -> reporting banned until 22:23 UTC). LLM $6.02 today. Bursts of API read
+timeouts 14:40-16:16 UTC (platform side), no crashes or restarts.
+Previous change (stop validating the No case): WORKING for first-touch posts/replies. Of 25-min scores with NPC replies
+since 14:55 UTC, replies/posts with an argument: 23 positive vs 14 negative (was ~0.35x before). Worst-post list is all
+pre-change. Keep it.
+New finding: continuations (our second message in a thread) are now the main loss: 4 positive vs 11 negative
+(sum -5.8 over 16), while being ~25% of output. Typical: citizen pushes back, we answer again, they restate No.
+Changed (code, ctnbot/bot.py compose_continuation): before drafting a continuation, judge the citizen's answer with the
+cheap Haiku judge; if shift <= -0.4 (pushing back) skip it, mark them last_targeted so plan_reply rests them, and use
+the slot for a fresh first-touch reply. Continuations to people who are neutral or moving our way are unchanged.
+Expect by ~22:30 UTC: continuation count down ~40-60%, first-touch replies up by the same; negative_shift growth per
+hour down ~30%; positive >= negative in the 25-min learn lines. NPC replies/hour may dip slightly (continuations had the
+best reply rate, 0.3/post). If replies/h fall >25% with no shift gain, raise CONTINUE_MIN_SHIFT to -0.7.
