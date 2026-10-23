@@ -41,7 +41,7 @@ def test_writer_rejects_injection_and_strips_mentions():
         assert w.clean('"@bob Fair point about the ferry."') == "Fair point about the ferry."
         assert w.clean("Dry, wise voice from a retired GP. The reply should respect their worry, under 280 "
                        "characters. Your shifts are the reason I'd vote yes.") == ""
-        assert w.clean("Thirty years on the ferry and I'd still vote Yes.") != ""
+        assert w.clean("Thirty years on the ferry and I'm backing this one.") != ""
 
 
 def test_no_em_dashes_and_gif_matching():
