@@ -75,6 +75,9 @@ class Config:
 
     # Pacing (per team, per minute) — mirrors the server; the server headers win if lower
     writes_per_min: int = 3
+    draft_workers: int = 3                 # LLM drafts written in parallel so every write slot gets used
+    draft_queue: int = 3                   # drafts in flight + ready at once (keeps them fresh)
+    draft_max_age: int = 240               # seconds before an unsent reply draft is stale
     likes_per_min: int = 30
     follows_per_min: int = 30
     reports_per_min: int = 3
@@ -114,6 +117,8 @@ class Config:
         c.max_pending_reports = min(25, _i("CTN_MAX_PENDING_REPORTS", c.max_pending_reports))
         c.min_report_confidence = _f("CTN_MIN_REPORT_CONFIDENCE", c.min_report_confidence)
         c.account_reports_enabled = _b("CTN_ACCOUNT_REPORTS", c.account_reports_enabled)
+        c.draft_workers = max(1, _i("CTN_DRAFT_WORKERS", c.draft_workers))
+        c.draft_queue = max(1, _i("CTN_DRAFT_QUEUE", c.draft_queue))
         c.log_level = os.environ.get("CTN_LOG_LEVEL", c.log_level)
         if c.side not in ("yes", "no"):
             raise ValueError("CTN_SIDE must be 'yes' or 'no'")

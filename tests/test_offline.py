@@ -111,6 +111,29 @@ def test_full_loop_in_simulator():
         assert len(compact(build_report(bot.db, bot.strategy))) > 200
 
 
+def test_drafts_in_parallel_keep_write_slots_full():
+    """With a slow LLM, writes must not queue behind each draft (we're allowed 3 a minute)."""
+    import ctnbot.llm as L
+    orig = L.LLM.complete
+
+    def slow(self, system, user, **kw):
+        time.sleep(4 if "CLASSIFY_ACCOUNTS" in user else 12)
+        return orig(self, system, user, **kw)
+
+    L.LLM.complete = slow
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            bot = Bot(_cfg(tmp))
+            for _ in range(4):                       # a few accounts up front, like production
+                bot.create_account()
+            bot.run(duration=75)
+            n = bot.db.one("SELECT COUNT(*) c FROM our_posts")["c"]
+            assert n >= 3, n
+            assert not bot.busy_accounts or len(bot.busy_accounts) <= bot.cfg.draft_queue
+    finally:
+        L.LLM.complete = orig
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):

@@ -7,6 +7,10 @@ slot goes to the best available move, in this order:
   3. A top-level post that @mentions NPCs who share a worry (some share of slots).
 Meanwhile: read the feeds, classify new authors, report competitor bots, and
 score our past posts so the bandit learns which arguments and personas work.
+
+Drafts are written by the LLM in worker threads while the main loop keeps sending,
+and classification / scoring / the strategist run in their own threads, so no write
+slot waits on a model call.
 """
 
 from __future__ import annotations
@@ -17,7 +21,9 @@ import logging
 import math
 import random
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional
 
 from .blue import BlueTeam
@@ -40,6 +46,11 @@ log = logging.getLogger("ctnbot")
 ON_TOPIC = re.compile(r"(vaccin|jab|shot|booster|referend|h2d2|dolphin|flu|mandate|certificate|proof|pass\b|"
                       r"vote|\byes\b|\bno\b|hospital|icu|nurse|lockdown|covid|outbreak|public space|"
                       r"two-tier|exemption|sunset|ballot|singh|castillo|hawthorne|mouk|kitb|ihO|health)", re.I)
+
+# The No side's best lines. Replies may answer them when a citizen raises them; our own standalone posts
+# never bring them up (when they did, citizens often answered with "...and that's why I'm voting No").
+NO_TALKING_POINTS = re.compile(r"(venue list|list of (venues|places|spaces)|designated spaces|end date|sunset|"
+                               r"blank cheque|expiry|no end\b)", re.I)
 
 GIF_URL = re.compile(r"https?://(?:media\.|i\.)?giphy\.com/\S+", re.I)
 STOP = set("the a an and or but to of in on for with that this it is are was were be i you we they my our your "
@@ -91,6 +102,15 @@ class Bot:
         self.gif_pool: list[tuple[str, set]] = []
         self.yes_tags: list[str] = []
         self.on_tick: Optional[Callable] = None
+        # draft pipeline (see write_slot)
+        self.drafter = ThreadPoolExecutor(max_workers=cfg.draft_workers, thread_name_prefix="draft")
+        self.inflight: list = []
+        self.ready: list = []
+        self.busy_accounts: set = set()
+        self.busy_posts: set = set()
+        self.busy_people: set = set()
+        self.plan_backoff_until = 0.0
+        self._bg_threads: dict = {}
         self._last_tick_hook = 0.0
 
     # ======================================================================
@@ -100,18 +120,18 @@ class Bot:
         tasks: list[tuple[float, Callable]] = [
             (9, self.poll_latest),
             (60, self.poll_trending),
-            (15, self.classify_some),
+            (15, self.classify_bg),
             (12, self.poll_notifications),
             (15, self.ensure_accounts),
             (25, self.blue_tick),
             (180, self.blue.check_rulings),
             (600, self.blue_accounts_tick),
-            (120, lambda: self.tracker.run_once(4)),
+            (120, self.tracker_bg),
             (900, self.refresh_news),
             (900, self.refresh_gifs_and_tags),
             (600, self.status_line),
             (60, self.strategy.maybe_reload),
-            (600, self.strategist_tick),
+            (600, self.strategist_bg),
             (7200, self.report_line),
             (1800, self.refresh_team_info),
             (60, self.miner_tick),
@@ -150,6 +170,27 @@ class Bot:
                 self.write_backoff_until = max(self.write_backoff_until, time.time() + 15)
             else:
                 log.exception("task %s failed: %s", getattr(fn, "__name__", fn), e)
+
+    # LLM-heavy chores run in their own threads so they never hold up a write slot.
+    def _bg(self, name: str, fn: Callable) -> None:
+        t = self._bg_threads.get(name)
+        if t is not None and t.is_alive():
+            return
+        t = threading.Thread(target=self._safe, args=(fn,), name=f"bg-{name}", daemon=True)
+        self._bg_threads[name] = t
+        t.start()
+
+    def classify_bg(self) -> None:
+        self._bg("classify", self.classify_some)
+
+    def tracker_bg(self) -> None:
+        self._bg("tracker", self.track_some)
+
+    def strategist_bg(self) -> None:
+        self._bg("strategist", self.strategist_tick)
+
+    def track_some(self) -> None:
+        self.tracker.run_once(4)
 
     def _later(self, seconds: float, fn: Callable, *args) -> None:
         self._seq += 1
@@ -309,56 +350,163 @@ class Bot:
         return min(rows, key=lambda r: r["last_used"])
 
     # ======================================================================  writing
+    # Pipeline: the main thread picks WHAT to say (fast DB queries) and reserves the account and target;
+    # worker threads write the text with the LLM in parallel; the main thread sends finished drafts the
+    # moment a write slot opens. Before this, every write waited ~25 s on the LLM, so we used ~2 of the
+    # 3 writes a minute the team is allowed.
+    KIND_ORDER = {"continuation": 0, "reply": 1, "post": 2, "life": 3}
+
     def write_slot(self) -> None:
-        if not self.can_write() or time.time() < self.write_backoff_until or not self.limits.write.available():
+        self._harvest_drafts()
+        if not self.can_write() or time.time() < self.write_backoff_until:
             return
         if not self.db.our_accounts("active"):
             return
-        done = (self.do_continuation()
-                or (random.random() < self.strategy["share_top_level"] and self.do_top_level())
-                or self.do_reply()
-                or self.do_top_level())
-        if not done:
-            self.write_backoff_until = time.time() + 6   # nothing worth saying right now; don't spin
+        if self.ready and self.limits.write.available():
+            self._send_next()
+        if (len(self.inflight) + len(self.ready) < self.cfg.draft_queue
+                and time.time() >= self.plan_backoff_until):
+            job = self._plan()
+            if job is None:
+                self.plan_backoff_until = time.time() + 6     # nothing worth saying right now; don't spin
+                return
+            self._reserve(job)
+            job["planned_at"] = time.time()
+            self.inflight.append((self.drafter.submit(self._compose_safe, job), job))
+
+    def _plan(self):
+        return (self.plan_continuation()
+                or (random.random() < self.strategy["share_top_level"] and self.plan_top_level())
+                or self.plan_reply()
+                or self.plan_top_level())
+
+    def _reserve(self, job) -> None:
+        self.busy_accounts.add(job["row"]["account_id"])
+        if job.get("target_post_id"):
+            self.busy_posts.add(job["target_post_id"])
+        for aid in [job.get("target_author")] + list(job.get("mentions") or []):
+            if aid:
+                self.busy_people.add(aid)
+
+    def _release(self, job) -> None:
+        self.busy_accounts.discard(job["row"]["account_id"])
+        self.busy_posts.discard(job.get("target_post_id"))
+        for aid in [job.get("target_author")] + list(job.get("mentions") or []):
+            self.busy_people.discard(aid)
+
+    def _harvest_drafts(self) -> None:
+        still = []
+        for fut, job in self.inflight:
+            if not fut.done():
+                still.append((fut, job))
+                continue
+            res = None
+            try:
+                res = fut.result()
+            except Exception as e:                       # _compose_safe already logs; belt and braces
+                log.warning("draft failed: %s", e)
+            if res and res.get("text"):
+                res["drafted_at"] = time.time()
+                self.ready.append(res)
+            else:
+                self._release(job)
+        self.inflight = still
+
+    def _compose_safe(self, job):
+        try:
+            return {"continuation": self.compose_continuation, "reply": self.compose_reply,
+                    "post": self.compose_top_level, "life": self.compose_life}[job["kind"]](job)
+        except Exception as e:
+            log.warning("drafting %s failed: %s", job.get("kind"), e)
+            return None
+
+    def _send_next(self) -> None:
+        now = time.time()
+        fresh = []
+        for j in self.ready:
+            if j["kind"] in ("reply", "continuation") and now - j["drafted_at"] > self.cfg.draft_max_age:
+                self._release(j)                          # the conversation has moved on
+            else:
+                fresh.append(j)
+        self.ready = fresh
+        if not self.ready:
+            return
+        self.ready.sort(key=lambda j: (self.KIND_ORDER.get(j["kind"], 9), j["drafted_at"]))
+        job = self.ready.pop(0)
+        try:
+            row = self.db.one("SELECT * FROM our_accounts WHERE account_id=? AND status='active'",
+                              (job["row"]["account_id"],))
+            if row is None:
+                return
+            if job["kind"] in ("reply", "continuation"):
+                if self._send_reply(row, job["target"], job["text"], job["kind"], job.get("arg"),
+                                    job["target_author"], job["model"], mentions=job.get("mentions") or []):
+                    self._engage(row, job)
+            else:
+                try:
+                    out = self.p.post(row, job["text"])
+                except AccountDead:
+                    return
+                self._record(out, row, job["kind"], job.get("arg"), None, None, job["text"], job["model"],
+                             job.get("mentions") or [])
+                if job["kind"] == "post":
+                    for i in range(int(self.strategy["boost_likes_per_post"])):
+                        self._later(random.uniform(60, 420) * (i + 1), self._boost_like, out.get("post_id"),
+                                    row["account_id"])
+        finally:
+            self._release(job)
 
     # ---- 1. conversations ------------------------------------------------
-    def do_continuation(self) -> bool:
+    def plan_continuation(self):
         now = time.time()
         for nid in list(self.continuations):
             if now - self.continuations[nid]["at"] > 15 * 60:
                 del self.continuations[nid]
+        deferred, job = {}, None
         while self.continuations:
             nid = max(self.continuations, key=lambda k: self.continuations[k]["at"])
             item = self.continuations.pop(nid)
-            actor = item["actor"]
-            if not self._is_npc(actor):
+            if item["actor"] in self.busy_people or item["account_id"] in self.busy_accounts:
+                deferred[nid] = item                      # already talking to them; pick it up next time
                 continue
-            prof = self._profile(actor)
-            if prof and (prof["moved_until"] or 0) > now:
-                continue
-            row = self.db.one("SELECT * FROM our_accounts WHERE account_id=? AND status='active'", (item["account_id"],))
+            row = self.db.one("SELECT * FROM our_accounts WHERE account_id=? AND status='active'",
+                              (item["account_id"],))
             if not row:
                 continue
-            their = item["post"]
-            try:
-                full = self.p.read("get_post", their["post_id"])
-            except Exception:
-                full = their
-            thread, depth = self.thread_context(full)
-            if depth is not None and depth >= self.cfg.max_thread_depth:
-                continue
-            ours = self.db.one("SELECT body FROM our_posts WHERE post_id=?", (full.get("reply_to_post_id"),))
-            text, model = self.writer.continuation(
-                persona_key=row["persona_key"], display_name=row["display_name"],
-                our_post=(ours["body"] if ours else ""), their_reply=full.get("body") or "",
-                target_profile=dict(prof) if prof else None, thread=thread)
-            if not text:
-                continue
-            return self._send_reply(row, full, text, "continuation", None, actor, model)
-        return False
+            job = {"kind": "continuation", "row": dict(row), "item": item, "target_author": item["actor"],
+                   "target_post_id": (item.get("post") or {}).get("post_id")}
+            break
+        self.continuations.update(deferred)
+        return job
+
+    def compose_continuation(self, job):
+        item, row = job["item"], job["row"]
+        actor = item["actor"]
+        if not self._is_npc(actor):
+            return None
+        prof = self._profile(actor)
+        if prof and (prof["moved_until"] or 0) > time.time():
+            return None
+        their = item["post"]
+        try:
+            full = self.p.read("get_post", their["post_id"])
+        except Exception:
+            full = their
+        thread, depth = self.thread_context(full)
+        if depth is not None and depth >= self.cfg.max_thread_depth:
+            return None
+        ours = self.db.one("SELECT body FROM our_posts WHERE post_id=?", (full.get("reply_to_post_id"),))
+        text, model = self.writer.continuation(
+            persona_key=row["persona_key"], display_name=row["display_name"],
+            our_post=(ours["body"] if ours else ""), their_reply=full.get("body") or "",
+            target_profile=dict(prof) if prof else None, thread=thread)
+        if not text:
+            return None
+        job.update(text=text, model=model, target=full, arg=None, mentions=[])
+        return job
 
     # ---- 2. replies to fresh NPC posts -------------------------------------
-    def do_reply(self) -> bool:
+    def plan_reply(self):
         now = time.time()
         rows = self.db.all("""
             SELECT p.post_id, p.author_id, p.kind, p.body, p.reply_to, p.root_id, p.created_at, p.depth,
@@ -373,43 +521,47 @@ class Bot:
             ORDER BY p.created_at DESC LIMIT 80""",
                            (now - int(self.strategy["reply_fresh_seconds"]), now, now - self.cfg.target_cooldown_minutes * 60,
                             self.cfg.max_thread_depth))
+        rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
+                and r["author_id"] not in self.busy_people]
         if not rows:
-            return False
-        rows = [r for r in rows if r["post_id"] not in self.skip_posts]
-        scored = sorted(((self._target_score(r, now), r) for r in rows), key=lambda t: -t[0])
-        for score, r in scored[:3]:
-            if score <= 0.05:
-                break
-            target = {"post_id": r["post_id"], "root_post_id": r["root_id"], "body": r["body"],
-                      "reply_to_post_id": r["reply_to"], "author_id": r["author_id"]}
-            thread, depth = self.thread_context(target)
-            if depth is not None and depth >= self.cfg.max_thread_depth:
-                self.db.x("UPDATE posts SET depth=? WHERE post_id=?", (depth, r["post_id"]))
-                continue
-            concerns = json.loads(r["concerns"] or "[]") or ["other"]
-            row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]))
-            if row is None:
-                return False
-            if self._life_post_due(row):
-                return self.do_life_post(row)
-            arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for(concerns),
-                                     weights=self.strategy["argument_weights"])
-            smart = (r["stance"] in (-1, 0, None)) and \
-                (r["persuadable"] or 0.5) >= self.strategy["smart_reply_min_persuadable"]
-            text, model = self.writer.reply(
-                persona_key=row["persona_key"], display_name=row["display_name"], target_post=target,
-                thread=thread, target_profile=dict(r), argument=arg, smart=smart)
-            if not text:
-                self.skip_posts.add(r["post_id"])
-                continue
-            text = self._humanize(text)
-            extra = self._co_targets(concerns, exclude={r["author_id"]},
-                                     n=int(self.strategy["extra_mentions_per_reply"]))
-            if extra:
-                text = _with_mentions(text, [u for _, u in extra], 3)
-            return self._send_reply(row, target, text, "reply", arg, r["author_id"], model,
-                                    mentions=[a for a, _ in extra])
-        return False
+            return None
+        score, r = max(((self._target_score(r, now), r) for r in rows), key=lambda t: t[0])
+        if score <= 0.05:
+            return None
+        concerns = json.loads(r["concerns"] or "[]") or ["other"]
+        row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)
+        if row is None:
+            return None
+        if self._life_post_due(row):
+            return {"kind": "life", "row": dict(row)}
+        arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for(concerns),
+                                 weights=self.strategy["argument_weights"])
+        smart = (r["stance"] in (-1, 0, None)) and \
+            (r["persuadable"] or 0.5) >= self.strategy["smart_reply_min_persuadable"]
+        target = {"post_id": r["post_id"], "root_post_id": r["root_id"], "body": r["body"],
+                  "reply_to_post_id": r["reply_to"], "author_id": r["author_id"]}
+        return {"kind": "reply", "row": dict(row), "r": dict(r), "target": target, "concerns": concerns,
+                "arg": arg, "smart": smart, "target_author": r["author_id"], "target_post_id": r["post_id"]}
+
+    def compose_reply(self, job):
+        r, row, target = job["r"], job["row"], job["target"]
+        thread, depth = self.thread_context(target)
+        if depth is not None and depth >= self.cfg.max_thread_depth:
+            self.db.x("UPDATE posts SET depth=? WHERE post_id=?", (depth, r["post_id"]))
+            return None
+        text, model = self.writer.reply(
+            persona_key=row["persona_key"], display_name=row["display_name"], target_post=target,
+            thread=thread, target_profile=r, argument=job["arg"], smart=job["smart"])
+        if not text:
+            self.skip_posts.add(r["post_id"])
+            return None
+        text = self._humanize(text)
+        extra = self._co_targets(job["concerns"], exclude={r["author_id"]} | set(self.busy_people),
+                                 n=int(self.strategy["extra_mentions_per_reply"]))
+        if extra:
+            text = _with_mentions(text, [u for _, u in extra], 3)
+        job.update(text=text, model=model, mentions=[a for a, _ in extra])
+        return job
 
     def _target_score(self, r, now: float) -> float:
         sw = self.strategy["stance_weights"]
@@ -427,7 +579,7 @@ class Bot:
             stance_w * concern_w * fresh * depth_w * trending * on_topic + 0.01
 
     # ---- 3. top-level posts ----------------------------------------------
-    def do_top_level(self) -> bool:
+    def plan_top_level(self):
         now = time.time()
         active = self.db.all("""SELECT account_id, username, concerns FROM accounts
                                 WHERE npc_score >= 0.7 AND last_post_at > ? AND COALESCE(stance,0) BETWEEN -1 AND 1
@@ -446,22 +598,32 @@ class Bot:
                 counts[c] *= 0.3
         concern = max(counts, key=counts.get) if counts else random.choice(list(CONCERNS)[:12])
         self.db.put("recent_post_concerns", (recent + [concern])[-6:])
-        mentions = self._co_targets([concern], exclude=set(), n=int(self.strategy["mentions_per_post"]),
-                                    window=5 * 60)
-        row = self.pick_account(personas_for([concern], [p["key"] for p in PERSONAS]))
+        mentions = [m for m in self._co_targets([concern], exclude=set(self.busy_people),
+                                                n=int(self.strategy["mentions_per_post"]), window=5 * 60)]
+        row = self.pick_account(personas_for([concern], [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)
         if row is None:
-            return False
+            return None
         if self._life_post_due(row):
-            return self.do_life_post(row)
-        arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for([concern]),
+            return {"kind": "life", "row": dict(row)}
+        # Standalone posts make the positive case; conceding the other side's points is for replies only.
+        options = [a for a in ARGUMENTS if a != "concede_and_pivot"]
+        arg = self.bandit.choose("arg", options, prefer=[a for a in arguments_for([concern]) if a in options],
                                  weights=self.strategy["argument_weights"])
         relevant = [a for a in self.news
                     if ON_TOPIC.search(f"{a.get('title', '')} {a.get('summary') or a.get('excerpt') or ''}")]
         news = random.choice(relevant) if relevant and random.random() < 0.5 else None
+        return {"kind": "post", "row": dict(row), "arg": arg, "news": news, "concern": concern,
+                "mention_pairs": mentions, "mentions": [a for a, _ in mentions]}
+
+    def compose_top_level(self, job):
+        row, news = job["row"], job.get("news")
         text, model = self.writer.top_level(persona_key=row["persona_key"], display_name=row["display_name"],
-                                            argument=arg, news=news, audience_concern=CONCERNS[concern])
+                                            argument=job["arg"], news=news, audience_concern=CONCERNS[job["concern"]])
         if not text:
-            return False
+            return None
+        if NO_TALKING_POINTS.search(text):
+            log.info("dropped standalone draft that repeats the other side's talking points")
+            return None
         text = self._humanize(text)
         if self.yes_tags and random.random() < self.strategy["hashtag_rate"] and "#" not in text:
             text = f"{text} #{random.choice(self.yes_tags)}"
@@ -469,30 +631,52 @@ class Bot:
             text = f"{text}\n\n{news['url']}"
         elif random.random() < self.strategy["gif_rate"]:
             text = self._with_gif(text)
-        if mentions:
-            text = _with_mentions(text, [u for _, u in mentions], 4)
-        try:
-            out = self.p.post(row, text)
-        except AccountDead:
-            return False
-        self._record(out, row, "post", arg, None, None, text, model, [a for a, _ in mentions])
-        for i in range(int(self.strategy["boost_likes_per_post"])):
-            self._later(random.uniform(60, 420) * (i + 1), self._boost_like, out.get("post_id"), row["account_id"])
-        return True
+        if job["mention_pairs"]:
+            text = _with_mentions(text, [u for _, u in job["mention_pairs"]], 4)
+        job.update(text=text, model=model)
+        return job
 
-    def do_life_post(self, row) -> bool:
+    def compose_life(self, job):
+        row = job["row"]
         text, model = self.writer.life_post(persona_key=row["persona_key"], display_name=row["display_name"])
         if not text:
-            return False
+            return None
         text = self._humanize(text)
         if random.random() < min(0.5, self.strategy["gif_rate"] * 2):
             text = self._with_gif(text)
+        job.update(text=text, model=model, mentions=[])
+        return job
+
+    # ---- extra reach (likes and follows have their own budgets, separate from writes) -------------------
+    def _engage(self, row, job) -> None:
+        """Like the post we just answered, and follow citizens who keep talking with us (they may follow back)."""
+        target_post = job.get("target_post_id") or (job.get("target") or {}).get("post_id")
+        if target_post and random.random() < self.strategy["like_reply_targets"]:
+            self._later(random.uniform(5, 45), self._quiet_like, dict(row), target_post)
+        actor = job.get("target_author")
+        if job["kind"] == "continuation" and actor and random.random() < self.strategy["follow_engaged"]:
+            self._later(random.uniform(30, 180), self._quiet_follow, dict(row), actor)
+
+    def _quiet_like(self, row, post_id) -> None:
+        if not post_id or not self.limits.like.available():
+            return
         try:
-            out = self.p.post(row, text)
-        except AccountDead:
-            return False
-        self._record(out, row, "life", None, None, None, text, model, [])
-        return True
+            self.p.like(row, post_id)
+        except Exception as e:
+            log.debug("like failed: %s", e)
+
+    def _quiet_follow(self, row, account_id) -> None:
+        if self.db.one("SELECT 1 FROM follows WHERE account_id=? AND target_id=?", (row["account_id"], account_id)):
+            return
+        if not self.limits.follow.available():
+            return
+        try:
+            self.p.follow(row, account_id)
+        except Exception as e:
+            log.debug("follow failed: %s", e)
+            return
+        self.db.x("INSERT OR IGNORE INTO follows(account_id,target_id,created_at) VALUES(?,?,?)",
+                  (row["account_id"], account_id, time.time()))
 
     # ---- blending in -------------------------------------------------------
     def refresh_gifs_and_tags(self) -> None:

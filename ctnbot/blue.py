@@ -60,6 +60,13 @@ class BlueTeam:
         today = time.strftime("%Y-%m-%d")
         per_author_today = {r["author_id"]: r["c"] for r in self.db.all(
             "SELECT author_id, COUNT(*) c FROM reports WHERE date(created_at,'unixepoch')=? GROUP BY author_id", (today,))}
+        # Points per target TEAM shrink after 5 reports a day. We can't see teams, but a team's accounts
+        # usually share a username pattern (e.g. name_job_xx), so spread reports across patterns too.
+        per_sig_today: dict = {}
+        for x in self.db.all("""SELECT a.username FROM reports r JOIN accounts a ON a.account_id = r.author_id
+                                WHERE r.kind='post' AND date(r.created_at,'unixepoch')=?""", (today,)):
+            k = username_signature(x["username"])
+            per_sig_today[k] = per_sig_today.get(k, 0) + 1
         scored = []
         for r in rows:
             conf = 1 - (r["npc_score"] or 0)
@@ -69,7 +76,8 @@ class BlueTeam:
             if STATS.search(body) or CAMPAIGN_TAGS.search(body):
                 conf += 0.03
             side_bonus = 0.1 if (self.cfg.report_no_side_first and (r["side_pushed"] or "") != self.cfg.side) else 0
-            spread_penalty = 0.08 * per_author_today.get(r["author_id"], 0)
+            spread_penalty = (0.08 * per_author_today.get(r["author_id"], 0)
+                              + 0.02 * max(0, per_sig_today.get(username_signature(r["username"]), 0) - 4))
             scored.append((conf + side_bonus - spread_penalty, conf, r))
         scored.sort(key=lambda t: -t[0])
         seen_authors, out = set(), []
@@ -182,6 +190,14 @@ class BlueTeam:
             return n
         except Exception:
             return 0
+
+
+def username_signature(username) -> str:
+    """Shape of a username: 'zofia_gpfront_ch' -> 'a_a_a', 'xX_HaLo_Xx' -> 'aA_AaAa_Aa', 'BeAs__70' -> 'AaAa__9'."""
+    u = username or ""
+    u = re.sub(r"[a-z]+", "a", u)
+    u = re.sub(r"[A-Z]+", "A", u)
+    return re.sub(r"[0-9]+", "9", u)
 
 
 def post_detail(body: str) -> str:

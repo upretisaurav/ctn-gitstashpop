@@ -112,6 +112,13 @@ CREATE TABLE IF NOT EXISTS kv (
     value        TEXT
 );
 
+CREATE TABLE IF NOT EXISTS follows (               -- citizens our accounts follow (once each)
+    account_id   INTEGER,
+    target_id    INTEGER,
+    created_at   REAL,
+    PRIMARY KEY (account_id, target_id)
+);
+
 CREATE TABLE IF NOT EXISTS llm_usage (
     day          TEXT,
     model        TEXT,
@@ -146,11 +153,14 @@ class DB:
         with self._lock:
             return self.conn.execute(sql, tuple(params))
 
+    # Fetch inside the lock too: drafting, classifying and mining all share this connection from threads.
     def one(self, sql: str, params: Iterable[Any] = ()) -> Optional[sqlite3.Row]:
-        return self.x(sql, params).fetchone()
+        with self._lock:
+            return self.conn.execute(sql, tuple(params)).fetchone()
 
     def all(self, sql: str, params: Iterable[Any] = ()) -> list:
-        return self.x(sql, params).fetchall()
+        with self._lock:
+            return self.conn.execute(sql, tuple(params)).fetchall()
 
     def get(self, key: str, default: Any = None) -> Any:
         row = self.one("SELECT value FROM kv WHERE key=?", (key,))

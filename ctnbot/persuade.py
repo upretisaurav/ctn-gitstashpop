@@ -116,9 +116,11 @@ class Writer:
                     f"{(news.get('summary') or news.get('excerpt') or '')[:300]}\n")
         arg = ARGUMENTS.get(argument, {}).get("gist", "")
         user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\n{hook}"
-                f"Write a standalone post (200-380 characters) for undecided neighbours whose main worry is: "
+                f"Write a standalone post (200-380 characters) for undecided neighbours who care about: "
                 f"{audience_concern}. Angle: {arg}\nThink out loud like a neighbour: start from something concrete "
-                f"in your own life, admit what's fair about the worry, then say why you land on Yes. One fact at most. "
+                f"in your own life, then say why you land on Yes. One fact at most. Make the positive case only: "
+                f"do NOT bring up the No side's talking points (the unpublished venue list, no end date or sunset "
+                f"clause, 'blank cheque'). People who haven't heard them shouldn't hear them from you. "
                 f"Output only the post text.")
         text, model = self.llm.complete(self.system, user, smart=False, max_tokens=260)
         return self.clean(text), model

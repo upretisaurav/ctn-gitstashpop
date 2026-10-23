@@ -5,6 +5,8 @@
   "extra_mentions_per_reply": 2,
   "mentions_per_post": 4,
   "boost_likes_per_post": 4,
+  "like_reply_targets": 0.6,
+  "follow_engaged": 0.5,
   "gif_rate": 0.2,
   "hashtag_rate": 0.4,
   "lowercase_rate": 0.12,
@@ -14,8 +16,8 @@
   "smart_reply_min_persuadable": 0.55,
   "stance_weights": {
     "-2": 0.2,
-    "-1": 1.0,
-    "0": 1.0,
+    "-1": 0.8,
+    "0": 1.4,
     "1": 0.55,
     "2": 0.1
   },
@@ -24,7 +26,8 @@
   "concern_weights": {},
   "style_notes": [
     "Vary how you open: don't start with 'Fair', 'Fair point' or 'Fair enough' (most of our replies already do, which reads as scripted)",
-    "Only mention the unpublished venue list or end date if the person raised it themselves"
+    "Only mention the unpublished venue list or end date if the person raised it themselves",
+    "Never volunteer the No side's talking points (venue list, end date, sunset) in a reply unless the person raised them"
   ],
   "avoid_phrases": [
     "Your worry about",
