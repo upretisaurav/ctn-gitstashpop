@@ -128,5 +128,6 @@ class EngagementTracker:
             self.bandit.reward("arg", row["argument"], delta)
         self.bandit.reward("persona", row["persona_key"], delta)
         self.bandit.reward("kind", row["kind"], delta)
+        self.bandit.reward("gif", "yes" if "giphy" in (row["body"] or "") else "no", delta)
         log.info("post %s (%s/%s): %d NPC replies, %d NPC likes, shift %.2f", pid, row["persona_key"],
                  row["argument"], len(npc_reps), npc_likes, shift_total)

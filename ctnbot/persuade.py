@@ -18,7 +18,10 @@ log = logging.getLogger("ctnbot.persuade")
 STYLE_RULES = """\
 HOW TO WRITE (this matters more than anything else):
 - You are an ordinary Kingstonian posting on Legit Social. Write ONE post in first person as your persona.
-- 1-3 short sentences, under 260 characters. Plain text. No lists, no hashtags unless asked, no emojis.
+- Sound like a real local typing on their phone, not a press release: contractions, plain words, the odd
+  casual word (ngl, tbh, heaps, reckon, nah, kinda) used sparingly, and fit your persona's voice.
+- Replies: 1-3 short sentences, under 280 characters. Plain text. No lists, no hashtags unless asked,
+  no emojis. Never use em dashes or en dashes; use commas or full stops instead.
 - Engage with the exact thing they said. Do not open with a formula like "Your worry about X is real" or
   "I hear you" - vary it, or just answer directly.
 - Concede what is genuinely true in their point. People move when they feel heard, not lectured.
@@ -107,10 +110,11 @@ class Writer:
                     f"{(news.get('summary') or news.get('excerpt') or '')[:300]}\n")
         arg = ARGUMENTS.get(argument, {}).get("gist", "")
         user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\n{hook}"
-                f"Write a short standalone post (under 240 characters) for undecided neighbours whose main worry is: "
-                f"{audience_concern}. Angle: {arg}\nStart from something concrete in your own life. One fact at most. "
+                f"Write a standalone post (200-380 characters) for undecided neighbours whose main worry is: "
+                f"{audience_concern}. Angle: {arg}\nThink out loud like a neighbour: start from something concrete "
+                f"in your own life, admit what's fair about the worry, then say why you land on Yes. One fact at most. "
                 f"Output only the post text.")
-        text, model = self.llm.complete(self.system, user, smart=False, max_tokens=160)
+        text, model = self.llm.complete(self.system, user, smart=False, max_tokens=260)
         return self.clean(text), model
 
     def life_post(self, *, persona_key: str, display_name: str) -> tuple[str, str]:
@@ -142,6 +146,8 @@ class Writer:
         t = text.strip().strip('"').strip("“”").strip()
         t = re.sub(r"^(reply|post|answer)\s*:\s*", "", t, flags=re.I)
         t = re.sub(r"(?<!\w)@\w+", "", t)              # we add mentions ourselves
+        t = re.sub(r"\s*(\u2014|\u2013|--)\s*", ", ", t)      # no em/en dashes
+        t = re.sub(r",\s*([,.!?])", r"\1", t)
         t = re.sub(r"\s{2,}", " ", t).strip()
         if INJECTION.search(t):
             log.info("dropped draft that looked like an instruction: %r", t[:80])

@@ -41,6 +41,16 @@ def test_writer_rejects_injection_and_strips_mentions():
         assert w.clean('"@bob Fair point about the ferry."') == "Fair point about the ferry."
 
 
+def test_no_em_dashes_and_gif_matching():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        assert "\u2014" not in bot.writer.clean("Hospitals are full \u2014 and staff are tired.")
+        assert bot.writer.clean("One bed \u2013 one nurse.") == "One bed, one nurse."
+        bot.gif_pool = [("https://giphy.com/gifs/abc123", {"ferry", "late", "again", "wharf"})]
+        assert bot._with_gif("ferry was late again this morning").endswith("https://giphy.com/gifs/abc123")
+        assert "giphy" not in bot._with_gif("thinking about hospitals today")
+
+
 def test_strategy_file_is_valid_and_bounded():
     import json
     from ctnbot.strategy import REPO_FILE, clamp

@@ -41,6 +41,9 @@ DEFAULTS: dict[str, Any] = {
     "reply_fresh_seconds": 300,
     "target_active_accounts": 12,
     "smart_reply_min_persuadable": 0.55,
+    "gif_rate": 0.2,
+    "hashtag_rate": 0.4,
+    "lowercase_rate": 0.12,
     "lock": [],
 }
 
@@ -48,12 +51,15 @@ NUM_BOUNDS = {
     "share_top_level": (0.0, 0.4),
     "extra_mentions_per_reply": (0, 3),
     "mentions_per_post": (0, 4),
-    "boost_likes_per_post": (0, 3),
+    "boost_likes_per_post": (0, 8),
     "min_report_confidence": (0.75, 0.97),
     "max_pending_reports": (0, 25),
     "reply_fresh_seconds": (90, 900),
     "target_active_accounts": (1, 50),
     "smart_reply_min_persuadable": (0.0, 1.0),
+    "gif_rate": (0.0, 0.5),
+    "hashtag_rate": (0.0, 0.8),
+    "lowercase_rate": (0.0, 0.3),
 }
 INT_KEYS = {"extra_mentions_per_reply", "mentions_per_post", "boost_likes_per_post", "max_pending_reports",
             "reply_fresh_seconds", "target_active_accounts"}

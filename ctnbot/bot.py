@@ -40,6 +40,13 @@ ON_TOPIC = re.compile(r"(vaccin|jab|shot|booster|referend|h2d2|dolphin|flu|manda
                       r"vote|\byes\b|\bno\b|hospital|icu|nurse|lockdown|covid|outbreak|public space|"
                       r"two-tier|exemption|sunset|ballot|singh|castillo|hawthorne|mouk|kitb|ihO|health)", re.I)
 
+GIF_URL = re.compile(r"https?://(?:media\.|i\.)?giphy\.com/\S+", re.I)
+STOP = set("the a an and or but to of in on for with that this it is are was were be i you we they my our your "
+           "at as so just not have has had do did if about from what when who how all can will would there their "
+           "them me us he she his her its been more than then too very".split())
+YES_TAGS = {"supportournurses", "proofkeepsusopen", "protectkingstonia", "h2d2", "kingstonia", "smallbusiness",
+            "mandatenow", "voteyes", "protectournurses", "h2d2yes"}
+
 FIRST_NAMES = ["Aroha", "Sina", "Liam", "Mele", "Josh", "Kiri", "Noah", "Losa", "Ella", "Tevita", "Grace", "Isaac",
                "Mia", "Pita", "Zoe", "Ruby", "Hemi", "Talia", "Jack", "Anahera", "Luke", "Nina", "Viliami", "Chloe",
                "Ari", "Leah", "Manu", "Jade", "Owen", "Salote", "Maya", "Finn", "Eti", "Holly", "Rangi", "Asha"]
@@ -77,6 +84,8 @@ class Bot:
         self.last_status = 0.0
         self.write_backoff_until = 0.0
         self.skip_posts: set[int] = set()      # targets whose draft was rejected
+        self.gif_pool: list[tuple[str, set]] = []
+        self.yes_tags: list[str] = []
         self.on_tick: Optional[Callable] = None
         self._last_tick_hook = 0.0
 
@@ -95,6 +104,7 @@ class Bot:
             (600, self.blue_accounts_tick),
             (120, lambda: self.tracker.run_once(4)),
             (900, self.refresh_news),
+            (900, self.refresh_gifs_and_tags),
             (600, self.status_line),
             (60, self.strategy.maybe_reload),
             (600, self.strategist_tick),
@@ -373,6 +383,7 @@ class Bot:
             if not text:
                 self.skip_posts.add(r["post_id"])
                 continue
+            text = self._humanize(text)
             extra = self._co_targets(concerns, exclude={r["author_id"]},
                                      n=int(self.strategy["extra_mentions_per_reply"]))
             if extra:
@@ -413,8 +424,6 @@ class Bot:
         concern = max(counts, key=counts.get) if counts else random.choice(list(CONCERNS)[:12])
         mentions = self._co_targets([concern], exclude=set(), n=int(self.strategy["mentions_per_post"]),
                                     window=5 * 60)
-        if not mentions and counts:
-            return False            # nobody active to aim at; a reply opportunity will come
         row = self.pick_account(personas_for([concern], [p["key"] for p in PERSONAS]))
         if row is None:
             return False
@@ -429,8 +438,13 @@ class Bot:
                                             argument=arg, news=news, audience_concern=CONCERNS[concern])
         if not text:
             return False
-        if news and news.get("url") and len(text) + len(news["url"]) < 470:
+        text = self._humanize(text)
+        if self.yes_tags and random.random() < self.strategy["hashtag_rate"] and "#" not in text:
+            text = f"{text} #{random.choice(self.yes_tags)}"
+        if news and news.get("url") and len(text) + len(news["url"]) < 440:
             text = f"{text}\n\n{news['url']}"
+        elif random.random() < self.strategy["gif_rate"]:
+            text = self._with_gif(text)
         if mentions:
             text = _with_mentions(text, [u for _, u in mentions], 4)
         try:
@@ -446,12 +460,54 @@ class Bot:
         text, model = self.writer.life_post(persona_key=row["persona_key"], display_name=row["display_name"])
         if not text:
             return False
+        text = self._humanize(text)
+        if random.random() < min(0.5, self.strategy["gif_rate"] * 2):
+            text = self._with_gif(text)
         try:
             out = self.p.post(row, text)
         except AccountDead:
             return False
         self._record(out, row, "life", None, None, None, text, model, [])
         return True
+
+    # ---- blending in -------------------------------------------------------
+    def refresh_gifs_and_tags(self) -> None:
+        """GIFs real citizens have posted (with the words around them), and popular Yes-friendly hashtags."""
+        rows = self.db.all("""SELECT p.body FROM posts p JOIN accounts a ON a.account_id = p.author_id
+                              WHERE p.body LIKE '%giphy.com%' AND a.npc_score >= 0.7
+                              ORDER BY p.created_at DESC LIMIT 300""")
+        pool = {}
+        for r in rows:
+            for url in GIF_URL.findall(r["body"] or ""):
+                words = _content_words(GIF_URL.sub(" ", r["body"]))
+                if words:
+                    pool[url.rstrip(".,)")] = words
+        self.gif_pool = list(pool.items())
+        try:
+            tags = [t.get("name", "").lower() for t in self.p.read("popular_tags")]
+        except Exception:
+            tags = []
+        self.yes_tags = [t for t in tags if t in YES_TAGS] or ["SupportOurNurses", "ProofKeepsUsOpen"]
+        log.info("blend-in: %d citizen GIFs, tags %s", len(self.gif_pool), self.yes_tags)
+
+    def _with_gif(self, text: str) -> str:
+        """Append a GIF a citizen used in a similar context, or nothing if none fits."""
+        if not self.gif_pool or "giphy" in text:
+            return text
+        mine = _content_words(text)
+        best, overlap = None, 0
+        for url, words in self.gif_pool:
+            o = len(mine & words)
+            if o > overlap:
+                best, overlap = url, o
+        if best and overlap >= 2 and len(text) + len(best) < 470:
+            return f"{text} {best}"
+        return text
+
+    def _humanize(self, text: str) -> str:
+        if text and random.random() < self.strategy["lowercase_rate"] and not text.startswith(("I ", "I'")):
+            text = text[0].lower() + text[1:]
+        return text
 
     def _life_post_due(self, row) -> bool:
         n = self.cfg.life_post_every
@@ -498,6 +554,7 @@ class Bot:
             self.bandit.pull("arg", arg)
         self.bandit.pull("persona", row["persona_key"])
         self.bandit.pull("kind", kind)
+        self.bandit.pull("gif", "yes" if "giphy" in (text or "") else "no")
         log.info("%s @%s [%s/%s, %s]: %s", kind.upper(), row["username"], row["persona_key"], arg, model,
                  text.replace("\n", " ")[:200])
 
@@ -605,6 +662,10 @@ class Bot:
                 log.info("TEAM %s", json.dumps(team, default=str)[:500])
         except Exception as e:
             log.debug("team info failed: %s", e)
+
+
+def _content_words(text: str) -> set:
+    return {w for w in re.findall(r"[a-z']{4,}", (text or "").lower()) if w not in STOP}
 
 
 def _with_mentions(text: str, usernames: list[str], cap: int) -> str:
