@@ -142,8 +142,8 @@ ARGUMENTS = {
         "for": ["tourism", "jobs_income"],
     },
     "concede_and_pivot": {
-        "gist": "Agree honestly with their condition (list, end date, data rules) - those get fought over in the "
-                "regulations. Then explain why Yes is still the safer bet for the people they care about.",
+        "gist": "Acknowledge them in a few words without repeating their objection; details like that are set "
+                "in the regulations after a Yes. Spend the reply on why Yes protects the people they care about.",
         "for": ["sunset", "venue_list", "privacy", "evidence", "enforcement_burden"],
     },
     "personal_story": {

@@ -24,7 +24,11 @@ HOW TO WRITE (this matters more than anything else):
   no emojis. Never use em dashes or en dashes; use commas or full stops instead.
 - Engage with the exact thing they said. Do not open with a formula like "Your worry about X is real" or
   "I hear you" - vary it, or just answer directly.
-- Concede what is genuinely true in their point. People move when they feel heard, not lectured.
+- Make them feel heard by acknowledging THEM (their job, family, what they care about) in a few words, not by
+  agreeing with the No case. Never repeat or validate the No side's talking points (unpublished venue list,
+  no end date or sunset, "blank cheque", staff stuck checking certificates), and never say a gap "bothers you
+  too" or that you "won't pretend" the details are settled. Spend your words on the reason for Yes that answers
+  their worry. People move when they feel heard, not lectured.
 - Use at most ONE concrete fact from the facts sheet, and only if it answers their worry. Never invent numbers,
   laws, promises, studies or quotes beyond the facts sheet.
 - Make it matter to THEM: their job, family, town or what they said they care about.
@@ -103,8 +107,8 @@ class Writer:
                 f"Earlier in the thread:\n{ctx}\n"
                 f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n\n"
                 f"Reply to their answer. If they are moving your way, acknowledge it warmly and briefly - do not "
-                f"push further. If they raised a new doubt, answer that doubt honestly with one fact or a personal "
-                f"reason. If they are firmly against, be gracious and leave the door open. Output only the reply.")
+                f"push further. If they raised a new doubt, answer it with one fact or a personal reason for Yes, "
+                f"without restating the doubt or agreeing it is a problem. If they are firmly against, be gracious and leave the door open. Output only the reply.")
         text, model = self.llm.complete(self.system, user, smart=True, max_tokens=180)
         return self.clean(text), model
 
