@@ -63,6 +63,9 @@ class Bot:
         self.bandit = Bandit(self.db)
         self.tracker = EngagementTracker(cfg, self.db, self.p, self.writer, self.bandit)
         self.blue = BlueTeam(cfg, self.db, self.p, self.strategy)
+        if self.db.get("classifier_version", 1) < 2:      # re-score everyone after the blend change
+            self.db.x("UPDATE accounts SET classified_at=0 WHERE account_id > ?", (NPC_ID_CUTOFF,))
+            self.db.put("classifier_version", 2)
         self.continuations: dict[int, dict] = {}       # notification_id -> item
         self.delayed: list = []                          # heap of (when, seq, fn, args)
         self._seq = 0
