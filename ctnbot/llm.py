@@ -140,7 +140,7 @@ def mock_completion(system: str, user: str) -> str:
         out = []
         for i in ids:
             n = int(i)
-            out.append({"id": n, "npc": 0.8 if n % 3 else 0.2, "stance": (n % 5) - 2, "stance_vacc": 1,
+            out.append({"id": n, "npc": 0.9 if n < 6000 else 0.02, "stance": (n % 5) - 2, "stance_vacc": 1,
                         "stance_yearly": 0, "side_pushed": "no" if n % 2 else "yes",
                         "concerns": ["sunset", "privacy"] if n % 2 else ["jobs_income"],
                         "identity": "market stall holder", "persuadable": 0.6})
