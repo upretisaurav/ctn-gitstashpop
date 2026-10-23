@@ -57,6 +57,7 @@ def build_report(db, strategy=None, hours: float = 24.0, samples: int = 6) -> di
         "llm_usd_today": round(db.llm_cost_today(), 3),
         "errors_recent": db.get("recent_errors", [])[-10:],
         "team": db.get("team_info", None),
+        "miner": db.get("miner_stats", None),
     }
     if strategy is not None:
         s = strategy.as_dict()

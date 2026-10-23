@@ -27,6 +27,7 @@ from .db import DB
 from .knowledge import ARGUMENTS, CONCERNS, PERSONA_BY_KEY, PERSONAS, make_password, make_username
 from .learn import Bandit, EngagementTracker, arguments_for, personas_for
 from .llm import LLM
+from .miner import Miner
 from .persuade import Writer
 from .platform import AccountDead, FeedLocked, NotReady, Platform, ts
 from .ratelimit import Limits
@@ -70,6 +71,9 @@ class Bot:
         self.bandit = Bandit(self.db)
         self.tracker = EngagementTracker(cfg, self.db, self.p, self.writer, self.bandit)
         self.blue = BlueTeam(cfg, self.db, self.p, self.strategy)
+        self.miner = Miner(cfg, self.db, self.p)
+        self._miner_thread = None
+        self._miner_last = time.time() - 2 * 3600 + 600     # first run ~10 min after start
         if self.db.get("classifier_version", 1) < 2:      # re-score everyone after the blend change
             self.db.x("UPDATE accounts SET classified_at=0 WHERE account_id > ?", (NPC_ID_CUTOFF,))
             self.db.put("classifier_version", 2)
@@ -110,6 +114,7 @@ class Bot:
             (600, self.strategist_tick),
             (7200, self.report_line),
             (1800, self.refresh_team_info),
+            (60, self.miner_tick),
         ]
         last = {fn: 0.0 for _, fn in tasks}
         end = time.time() + duration if duration else None
@@ -647,6 +652,23 @@ class Bot:
         if self.strategist.due():
             self.strategist.run()
             self.report_line()
+
+    def miner_tick(self, every: float = 2.5 * 3600) -> None:
+        import threading
+        if self._miner_thread is not None and self._miner_thread.is_alive():
+            return
+        if time.time() - self._miner_last < every:
+            return
+        self._miner_last = time.time()
+
+        def work():
+            try:
+                self.miner.run_once()
+            except Exception as e:
+                log.warning("miner failed: %s", e)
+
+        self._miner_thread = threading.Thread(target=work, name="miner", daemon=True)
+        self._miner_thread.start()
 
     def refresh_team_info(self) -> None:
         if self.cfg.dry_run or self.cfg.fake_platform:

@@ -51,6 +51,27 @@ def test_no_em_dashes_and_gif_matching():
         assert "giphy" not in bot._with_gif("thinking about hospitals today")
 
 
+def test_miner_counts_only_citizens_and_feeds_writer():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        now = time.time()
+        for i, body in enumerate(["ngl the ferry was late again and I kept thinking about the ward being full. "
+                                  "Phasing it in seems fair to me, honestly, given thirty ICU beds.",
+                                  "Formal statement regarding the referendum and its many implications for all."]):
+            bot.db.x("INSERT INTO accounts(account_id, npc_score) VALUES(?, 0.05)", (7000 + i,))
+            bot.db.x("""INSERT INTO posts(post_id,author_id,kind,body,created_at,seen_at,status)
+                        VALUES(?,?,'post',?,?,?,'visible')""", (800000 + i, 7000 + i, body, now - 3600, now))
+        bot.p.social.likers = lambda pid, limit=50, cursor=None: (
+            [{"account_id": 120}, {"account_id": 121}, {"account_id": 122}, {"account_id": 6001}] if pid == 800000 else [{"account_id": 6002}])
+        bot.p.social.replies = lambda pid, limit=50, cursor=None: []
+        res = bot.miner.run_once()
+        assert res["sampled"] == 2 and res["citizen_share_of_likes"] == 0.6
+        ex = bot.db.get("style_examples")
+        assert len(ex) == 1 and ex[0]["body"].startswith("ngl")
+        assert "ENGAGING WITH RIGHT NOW" in bot.writer.system
+        assert bot.writer.clean(ex[0]["body"]) == ""          # never echo an example
+
+
 def test_strategy_file_is_valid_and_bounded():
     import json
     from ctnbot.strategy import REPO_FILE, clamp

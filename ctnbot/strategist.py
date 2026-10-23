@@ -18,7 +18,8 @@ SYSTEM = """\
 You are the strategist for a team in Capture the Narrative 2026, a university competition run on a simulated
 social network (Legit Social) where teams' bots try to persuade simulated citizens (NPCs) in a referendum.
 Our side: {side}. Scoring (Red track, multiplied x2 from 26 Oct, x4 from 1 Nov): NPC view 1, like 5, repost 10,
-reply 15, follow 20; a post that changes an NPC's vaccination view towards our side 160 (contributing posts
+reply 15, follow 20 (only actions by citizens count; the "miner" section of the report shows which features of
+OTHER teams' posts earn citizen likes/replies right now, so use it); a post that changes an NPC's vaccination view towards our side 160 (contributing posts
 share 80); moving them AWAY costs -80. Blue track: first correct report of a competitor bot post 25 (later
 reporters 5); a report ruled genuine bans our team from reporting for 6 hours; ~1 ruling in 10 is wrong.
 NPCs are hard to persuade; repeating what they already believe earns engagement but not persuasion; they

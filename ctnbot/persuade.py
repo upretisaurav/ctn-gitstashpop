@@ -69,6 +69,12 @@ class Writer:
             extra += "\nLESSONS FROM WHAT HAS WORKED SO FAR:\n" + "\n".join(f"- {n}" for n in notes)
         if avoid:
             extra += "\nNEVER USE THESE PHRASES: " + "; ".join(f'"{a}"' for a in avoid)
+        examples = self.db.get("style_examples", []) or []
+        if examples:
+            extra += ("\nPOSTS REAL CITIZENS ARE ENGAGING WITH RIGHT NOW (written by other people). Match their tone, "
+                      "length and shape - how they open, how casual they are, how they weave a fact into everyday "
+                      "life. NEVER copy their words or phrases, and argue for your own side only:\n"
+                      + "\n".join(f"- \"{e['body']}\"" for e in examples[:5]))
         return self._base_system + extra
 
     # ------------------------------------------------------------- replies
@@ -170,6 +176,9 @@ class Writer:
         rows = self.db.all("SELECT body FROM our_posts ORDER BY created_at DESC LIMIT 150")
         for r in rows:
             if r["body"] and difflib.SequenceMatcher(None, t.lower(), r["body"].lower()).ratio() > 0.8:
+                return True
+        for e in self.db.get("style_examples", []) or []:      # never echo the examples we learn from
+            if difflib.SequenceMatcher(None, t.lower(), e["body"].lower()).ratio() > 0.6:
                 return True
         return False
 
