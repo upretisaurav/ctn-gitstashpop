@@ -144,7 +144,12 @@ class Bot:
             log.warning("feed locked (%s) — pausing writes for 5 min", e)
             self.locked_until = time.time() + 300
         except Exception as e:
-            log.exception("task %s failed: %s", getattr(fn, "__name__", fn), e)
+            status = getattr(e, "status", None)
+            if status is not None and int(status) >= 500:
+                log.warning("Legit Social %s on %s, will retry", status, getattr(fn, "__name__", fn))
+                self.write_backoff_until = max(self.write_backoff_until, time.time() + 15)
+            else:
+                log.exception("task %s failed: %s", getattr(fn, "__name__", fn), e)
 
     def _later(self, seconds: float, fn: Callable, *args) -> None:
         self._seq += 1
@@ -282,10 +287,13 @@ class Bot:
             log.info("could not delete retired @%s: %s", row["username"], e)
         self.db.x("UPDATE our_accounts SET status='deleted' WHERE account_id=?", (row["account_id"],))
 
-    def pick_account(self, persona_options: Optional[list[str]] = None, exclude: set = frozenset()):
+    def pick_account(self, persona_options: Optional[list[str]] = None, exclude: set = frozenset(),
+                     rest_seconds: float = 600):
         rows = [r for r in self.db.our_accounts("active") if r["account_id"] not in exclude]
         if not rows:
             return None
+        rested = [r for r in rows if time.time() - (r["last_used"] or 0) > rest_seconds]
+        rows = rested or rows                     # nobody posts twice within ~10 minutes if avoidable
         if persona_options:
             keys = sorted({r["persona_key"] for r in rows})
             fit = [k for k in keys if k in persona_options] or keys
@@ -426,7 +434,12 @@ class Bot:
                 counts[c] = counts.get(c, 0) + 1
         for c in counts:
             counts[c] *= self.strategy.weight("concern_weights", c)
+        recent = self.db.get("recent_post_concerns", []) or []
+        for c in recent[-3:]:                     # rotate topics across standalone posts
+            if c in counts:
+                counts[c] *= 0.3
         concern = max(counts, key=counts.get) if counts else random.choice(list(CONCERNS)[:12])
+        self.db.put("recent_post_concerns", (recent + [concern])[-6:])
         mentions = self._co_targets([concern], exclude=set(), n=int(self.strategy["mentions_per_post"]),
                                     window=5 * 60)
         row = self.pick_account(personas_for([concern], [p["key"] for p in PERSONAS]))
