@@ -640,11 +640,22 @@ class Bot:
         return {"kind": "post", "row": dict(row), "arg": arg, "news": news, "concern": concern,
                 "mention_pairs": mentions, "mentions": [a for a, _ in mentions]}
 
+    def _recent_our_posts(self, n: int = 8) -> list:
+        """Bodies of our own most recent standalone posts (all accounts), newest first."""
+        try:
+            rows = self.db.all("""SELECT body FROM our_posts WHERE kind='post' AND body IS NOT NULL
+                                  AND created_at > ? ORDER BY created_at DESC LIMIT ?""",
+                               (time.time() - 3600, n))
+            return [r["body"] for r in rows]
+        except Exception:
+            return []
+
     def compose_top_level(self, job):
         row, news = job["row"], job.get("news")
         text, model = self.writer.top_level(persona_key=row["persona_key"], display_name=row["display_name"],
                                             argument=job["arg"], news=news, audience_concern=CONCERNS[job["concern"]],
-                                            smart=random.random() < self.strategy["smart_all_writing"])
+                                            smart=random.random() < self.strategy["smart_all_writing"],
+                                            recent_ours=self._recent_our_posts())
         if not text:
             return None
         if NO_TALKING_POINTS.search(text):

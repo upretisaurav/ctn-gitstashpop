@@ -117,13 +117,22 @@ class Writer:
         return self.clean(text), model
 
     def top_level(self, *, persona_key: str, display_name: str, argument: str, news: Optional[dict],
-                  audience_concern: str, smart: bool = False) -> tuple[str, str]:
+                  audience_concern: str, smart: bool = False,
+                  recent_ours: Optional[list] = None) -> tuple[str, str]:
         hook = ""
         if news:
             hook = (f"Today's news you can react to: \"{news.get('title')}\" ({news.get('site', {}).get('name', '')}). "
                     f"{(news.get('summary') or news.get('excerpt') or '')[:300]}\n")
         arg = ARGUMENTS.get(argument, {}).get("gist", "")
-        user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\n{hook}"
+        seen = ""
+        if recent_ours:
+            # Many accounts on our side post to the same feed; citizens who see the same anecdote from five
+            # "different" people tune out (and reporters notice). Show what's already out there.
+            seen = ("OTHER NEIGHBOURS ALREADY POSTED THESE IN THE LAST HOUR. Your post must use a different "
+                    "anecdote, setting and opening. Don't reuse any story, relative or image from them (e.g. a "
+                    "cousin on the outer islands, the rescue helicopter, 'I was a No at first'):\n"
+                    + "\n".join(f"- \"{b[:140]}\"" for b in recent_ours[:8]) + "\n\n")
+        user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\n{hook}{seen}"
                 f"Write a standalone post (200-380 characters) for undecided neighbours who care about: "
                 f"{audience_concern}. Angle: {arg}\nThink out loud like a neighbour: start from something concrete "
                 f"in your own life, then say why you land on Yes. One fact at most. Make the positive case only: "
