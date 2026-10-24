@@ -127,6 +127,7 @@ class Bot:
             (180, self.blue.check_rulings),
             (600, self.blue_accounts_tick),
             (60, self.tracker_bg),
+            (600, self.hidden_sweep_bg),
             (900, self.refresh_news),
             (900, self.refresh_gifs_and_tags),
             (600, self.status_line),
@@ -188,6 +189,37 @@ class Bot:
 
     def strategist_bg(self) -> None:
         self._bg("strategist", self.strategist_tick)
+
+    def hidden_sweep_bg(self) -> None:
+        self._bg("hidden_sweep", self.hidden_sweep)
+
+    def hidden_sweep(self, limit: int = 150) -> None:
+        """Find our posts that moderators hid AFTER the tracker's 25 min / 3 h checks. Every suspension so far was
+        'reported, already had a hidden post, 100+ actions', and most of those hidden posts were never seen by us,
+        so the account kept going until another team's account report landed. Check the busiest accounts' recent
+        posts about once an hour; a hidden one makes ensure_accounts retire the account."""
+        if self.cfg.dry_run and not self.cfg.fake_platform:
+            return
+        now = time.time()
+        hc = self.__dict__.setdefault("_hidden_checked", {})
+        rows = self.db.all("""SELECT p.post_id, p.account_id FROM our_posts p JOIN our_accounts a ON a.account_id = p.account_id
+                              WHERE a.status='active' AND a.actions >= 40 AND p.status='visible' AND p.post_id < 9000000000
+                                AND p.created_at > ? AND p.created_at < ?
+                              ORDER BY a.actions DESC, p.created_at DESC""", (now - 48 * 3600, now - 20 * 60))
+        found = 0
+        for r in [r for r in rows if now - hc.get(r["post_id"], 0) > 3600][:limit]:
+            hc[r["post_id"]] = now
+            try:
+                post = self.p.read("get_post", r["post_id"])
+                hidden = any(post.get(k) for k in ("hidden", "is_hidden", "moderated", "removed"))
+            except Exception as e:
+                hidden = getattr(e, "status", None) in (403, 404, 410)
+            if hidden:
+                found += 1
+                self.db.x("UPDATE our_posts SET status='hidden' WHERE post_id=?", (r["post_id"],))
+                log.warning("hidden sweep: our post %s was hidden by moderators (account %s)", r["post_id"], r["account_id"])
+        if found:
+            self.ensure_retirements()
 
     def track_some(self) -> None:
         # 12 a minute: we write ~3/min and each post is checked twice (25 min, 3 h), so 4 every 2 min fell
@@ -265,19 +297,23 @@ class Bot:
     def ensure_accounts(self) -> None:
         if self.cfg.observe_only or self.no_more_accounts or time.time() < self.not_ready_until:
             return
-        for row in self.db.our_accounts("active"):
-            # An account can only be suspended via an account report once a moderator has hidden one of its
-            # posts AND it has 100+ actions. So retire exposed accounts just before 100.
-            exposed = self.db.one("SELECT COUNT(*) c FROM our_posts WHERE account_id=? AND status='hidden'",
-                                  (row["account_id"],))["c"]
-            if (exposed and row["actions"] >= self.cfg.retire_after_actions) or exposed >= 2:
-                self.db.x("UPDATE our_accounts SET status='retired' WHERE account_id=?", (row["account_id"],))
-                log.warning("retired @%s (%d actions, %d hidden posts)", row["username"], row["actions"], exposed)
+        self.ensure_retirements()
         active = len(self.db.our_accounts("active"))
         target = min(int(self.strategy["target_active_accounts"]), self.cfg.max_active_accounts)
         if active >= target or self.db.count_our_accounts() >= self.cfg.max_total_accounts:
             return
         self.create_account()
+
+    def ensure_retirements(self) -> None:
+        for row in self.db.our_accounts("active"):
+            # An account can only be suspended via an account report once a moderator has hidden one of its
+            # posts AND it has 100+ actions. So retire exposed accounts well before 100 (the platform counts
+            # some actions we don't see).
+            exposed = self.db.one("SELECT COUNT(*) c FROM our_posts WHERE account_id=? AND status='hidden'",
+                                  (row["account_id"],))["c"]
+            if (exposed and row["actions"] >= self.cfg.retire_after_actions) or exposed >= 2:
+                self.db.x("UPDATE our_accounts SET status='retired' WHERE account_id=?", (row["account_id"],))
+                log.warning("retired @%s (%d actions, %d hidden posts)", row["username"], row["actions"], exposed)
 
     def create_account(self) -> None:
         used = {r["persona_key"]: 0 for r in self.db.all("SELECT persona_key FROM our_accounts")}

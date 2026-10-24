@@ -192,3 +192,15 @@ Expect by next run: no "reported post" runs of >2 on one @handle per day; report
 rulings per report. Red numbers unaffected. Next red candidate: posts lean heavily on no_locks_out (about half of POST lines)
 and one worst post shows a citizen reading "a No takes it off the table" as a reason for No; if post neg rises, cut
 no_locks_out for posts and lock argument_weights.
+
+## 2026-10-25 10:40 Adelaide (Sun 00:10 UTC): find hidden posts before other teams' account reports land (manual, with Saurav)
+Saw: score ~25k (Poll 2: +6,000, Yes led). Hourly red batches +330 to +640. Portal: 64 registered, 16 banned. Every
+suspension message reads "reported, already had a post hidden by the moderator, and at least 100 actions". Our DB still
+shows hidden=21, flat since 04:08 UTC, while suspensions went 2 -> 10: the tracker only checks a post at 25 min and 3 h, so
+posts hidden later were never noticed, the account wasn't retired, and kept acting past 100.
+Blue: ~10% of reports ruled genuine (14/132) -> a 6 h ban almost every cycle, and the 09:49 batch shows only ~7 of 23
+correct reports earned points (per-team diminishing). Blue is a few % of our points; left as is.
+Changed: hidden_sweep every 10 min (background): re-checks posts from the last 48 h of accounts with 40+ actions, about
+hourly per post, up to 150 reads per run; a hidden post triggers retirement. retire_after_actions 80 -> 70.
+Expect: "hidden sweep:" warnings and retirements in the next hours (likely a batch at first), then far fewer
+"has been suspended" messages on the portal. Account creation rate goes up a little (cap 200 total; 64 used).

@@ -54,7 +54,7 @@ class Config:
     target_active_accounts: int = 12       # grow this towards 50 once things work
     max_active_accounts: int = 50
     max_total_accounts: int = 200
-    retire_after_actions: int = 80         # retire an exposed account well before 100 actions (platform counts more than we see)
+    retire_after_actions: int = 70         # retire an exposed account well before 100 actions (platform counts more than we see)
 
     # Red team
     reply_fresh_seconds: int = 300         # only reply to NPC posts younger than this
