@@ -15,10 +15,10 @@
   "reply_fresh_seconds": 300,
   "smart_reply_min_persuadable": 0.55,
   "stance_weights": {
-    "-2": 0.2,
-    "-1": 0.8,
+    "-2": 0.1,
+    "-1": 0.3,
     "0": 1.4,
-    "1": 0.55,
+    "1": 0.8,
     "2": 0.1
   },
   "argument_weights": {},
@@ -38,7 +38,8 @@
   "lock": [
     "min_report_confidence",
     "smart_all_writing",
-    "share_top_level"
+    "share_top_level",
+    "stance_weights"
   ],
   "smart_all_writing": 1.0
 }

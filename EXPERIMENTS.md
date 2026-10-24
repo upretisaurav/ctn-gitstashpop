@@ -155,3 +155,20 @@ opening, naming the overused ones. No change to reports (min_report_confidence s
 Expect by next run: POST lines ~45% of writes; fewer repeated cousin/helicopter posts in POST lines; recent_6h post
 pos >= neg again and avg_likes per post >= 0.55; NPC likes/h back to ~85+. If posts stay net negative with the dedup in
 place, the issue is the post content itself; then try cutting outer_islands weight and lock argument_weights.
+
+## 2026-10-25 04:50 Adelaide (Sat 18:20 UTC): stop replying to No-leaners (stance -1 weight 0.3, locked)
+Saw (14:28->18:09 UTC, 3.7 h): posting steady (posts_24h ~4209, ~175/h), no crashes or restarts since the 14:28 deploy
+(platform read timeouts only). STATUS deltas: NPC replies 938->1016 (~21/h, flat), likes 2451->2766 (~86/h, up from ~75/h).
+24 h: positive 125 vs negative 146 (was 128/180). Hidden flat at 21. Suspended 3->7 (+4 in 3.7 h, e.g. @HoFu__53 15:00,
+@TheRealLeilaniKapa 16:57; bot replaced them, 40 active). Reports: 95 inauthentic / 13 genuine cumulative, reporting
+blocked until 20:00 UTC. LLM $9.11 today at 18:09 UTC.
+Previous change (share_top_level 0.45 + recent-post dedup in post prompt): MOSTLY WORKED. recent_6h post n=517
+pos 14 / neg 15 (was 7/11), avg_likes 0.65 (was 0.54, target 0.55); likes/h back to ~86. Keep it.
+recent_6h by target stance: reply/0 n=168 5/4, reply/1 n=113 2/1, reply/-1 n=57 1/5, reply/-2 0/1 (prior runs: -1 was
+1/3 and 1/9-ish via continuations). Rough points: reply/-1 = 57*(0.21*15+0.32*5) + 160 - 400 = ~+30 vs reply/0 ~+800.
+The strategist's overlay had raised -1 to 0.8 and cut 0 to 0.9.
+Changed: strategy.json stance_weights {-2:0.1, -1:0.3, 0:1.4, 1:0.8, 2:0.1}, added "stance_weights" to lock.
+Expect by next run: reply/-1 n roughly a third of before (~20 in 6 h), reply/0 n up; recent_6h reply neg <= pos;
+24 h negative_shift growth slows. NPC replies/h may dip slightly (No-leaners reply more). If reply/0 turns net
+negative at the higher volume, set 0 back to 1.0 and give 1 more weight.
+Watch: suspensions (+4 this window). If they keep climbing, look for a common pattern in suspended accounts' last posts.
