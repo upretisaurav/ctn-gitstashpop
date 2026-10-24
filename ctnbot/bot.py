@@ -341,15 +341,24 @@ class Bot:
         rows = [r for r in self.db.our_accounts("active") if r["account_id"] not in exclude]
         if not rows:
             return None
-        rested = [r for r in rows if time.time() - (r["last_used"] or 0) > rest_seconds]
-        rows = rested or rows                     # nobody posts twice within ~10 minutes if avoidable
+        # Rest by last WRITE, not last_used: likes, follows and reads also touch last_used, so with 40
+        # accounts nobody ever looked "rested", the guard fell away and the persona bandit sent one
+        # account 10+ posts in 20 minutes (looks like a bot, gets reported, and repeats itself).
+        now = time.time()
+        wrote = {w["account_id"]: w["t"] or 0 for w in self.db.all(
+            "SELECT account_id, MAX(created_at) t FROM our_posts WHERE created_at > ? GROUP BY account_id",
+            (now - 6 * 3600,))}
+        rested = [r for r in rows if now - wrote.get(r["account_id"], 0) > rest_seconds]
+        if not rested:                            # everyone wrote recently: take whoever wrote longest ago
+            return min(rows, key=lambda r: (wrote.get(r["account_id"], 0), r["last_used"]))
+        rows = rested
         if persona_options:
             keys = sorted({r["persona_key"] for r in rows})
             fit = [k for k in keys if k in persona_options] or keys
             chosen = self.bandit.choose("persona", fit, prefer=persona_options,
                                         weights=self.strategy["persona_weights"])
             rows = [r for r in rows if r["persona_key"] == chosen] or rows
-        return min(rows, key=lambda r: r["last_used"])
+        return min(rows, key=lambda r: (wrote.get(r["account_id"], 0), r["last_used"]))
 
     # ======================================================================  writing
     # Pipeline: the main thread picks WHAT to say (fast DB queries) and reserves the account and target;

@@ -97,3 +97,26 @@ the backlog drains behind them. No content/strategy change, so Sonnet and the st
 Expect by next run: REPORT recent_6h populated with posts from the last few hours; STATUS npc_replies/likes deltas up
 (real rate, likely ~30+/h and ~55+/h); learn lines for posts ~25-30 min old. Then judge Sonnet (by_kind_model) and
 by_target_stance; if avoid_lockdown stays net negative on fresh data and the strategist hasn't cut it, cut it to ~0.4.
+
+## 2026-10-24 16:50 Adelaide (Sat 06:20 UTC): spread writes across accounts (rest by last write)
+Saw (02:21->06:15 UTC, 3.9 h): posting steady ~3/min (60 REPLY/POST/CONTINUATION/LIFE lines in 05:55-06:15). No crashes,
+no restarts besides the 02:24 deploy. STATUS deltas: NPC replies 528->745 (+217, ~56/h), likes 1170->1797 (+627, ~160/h);
+both inflated by the tracker draining its backlog, so not a clean rate yet. 24 h: positive 107 vs negative 188.
+Hidden 10->21 (+11), almost all older posts (ids ~328-333k) discovered at 03:42-04:08 by the backlog sweep; 7 accounts
+retired/replaced, none hidden since 04:08. Reports 24 h 44 inauthentic / 5 genuine; reporting banned until 07:42 UTC.
+LLM $3.15 today (UTC day) at 06:15.
+Previous change (tracker 12/min, newest first): WORKED. recent_6h is populated (985 posts scored).
+recent_6h by kind (all Sonnet): post n=394 pos 14 / neg 6 (net positive, 0.56 likes/post); reply n=423 pos 15 / neg 24;
+continuation n=122 pos 7 / neg 9, but continuation to stance >=1: 6/0, to stance <=0: 1/9. reply/0 12/18, reply/-1 1/3.
+share_top_level is already at its 0.4 upper bound.
+BUG found: in 20 min one account (@pita.lealaiauloto86, dev_hannah) wrote 13 times and @xX_GrDo_Xx 11 times, many near-
+identical "my cousin on the outer islands" posts. pick_account's 10-min rest used last_used, which likes/follows/reads
+also update, so nobody ever looked rested, the guard fell away and the UCB persona bandit kept picking the same persona
+(one account). That looks like a bot to reporters (likely part of the hidden posts), repeats one voice to the same
+citizens, and wastes the other 38 accounts' reach.
+Changed (code, ctnbot/bot.py pick_account): rest by last WRITE time from our_posts; if nobody is rested, take whoever
+wrote longest ago (ignoring persona). New offline test covers it.
+Expect by next run: no account with more than ~2 writes in any 10 min (check REPLY/POST lines by @handle); more
+distinct personas per hour; hidden posts flat; likes/replies per post flat or up (less repetition). Persona bandit
+arms will get more even pulls.
+Next candidate: continuations only to citizens at stance >=1 (stance <=0 continuations are 1 pos / 9 neg).

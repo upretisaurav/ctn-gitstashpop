@@ -139,6 +139,24 @@ def test_drafts_in_parallel_keep_write_slots_full():
         L.LLM.complete = orig
 
 
+def test_pick_account_rests_recent_writers_even_if_recently_liked():
+    """last_used is touched by likes/reads; the rest guard must use last WRITE time."""
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        for _ in range(3):
+            bot.create_account()
+        accts = bot.db.our_accounts("active")
+        now = time.time()
+        for a in accts:                                  # everyone just liked something
+            bot.db.x("UPDATE our_accounts SET last_used=? WHERE account_id=?", (now, a["account_id"]))
+        hot = accts[0]
+        bot.db.x("INSERT INTO our_posts(post_id,account_id,persona_key,kind,created_at) VALUES(?,?,?,?,?)",
+                 (990001, hot["account_id"], hot["persona_key"], "post", now - 30))
+        for _ in range(10):
+            row = bot.pick_account([hot["persona_key"]])
+            assert row["account_id"] != hot["account_id"]
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):
