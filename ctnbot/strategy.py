@@ -51,7 +51,7 @@ DEFAULTS: dict[str, Any] = {
 }
 
 NUM_BOUNDS = {
-    "share_top_level": (0.0, 0.4),
+    "share_top_level": (0.0, 0.7),
     "extra_mentions_per_reply": (0, 3),
     "mentions_per_post": (0, 4),
     "boost_likes_per_post": (0, 8),

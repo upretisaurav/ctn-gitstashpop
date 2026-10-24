@@ -367,6 +367,7 @@ class Bot:
     # 3 writes a minute the team is allowed.
     KIND_ORDER = {"continuation": 0, "reply": 1, "post": 2, "life": 3}
     CONTINUE_MIN_SHIFT = -0.4      # skip a continuation when their answer to us reads at or below this
+    CONTINUE_MIN_STANCE = 1        # only continue with citizens already leaning Yes (stance <=0 scored 3 up / 14 down)
 
     def write_slot(self) -> None:
         self._harvest_drafts()
@@ -485,6 +486,9 @@ class Bot:
                               (item["account_id"],))
             if not row:
                 continue
+            prof = self._profile(item["actor"])
+            if prof is not None and prof["stance"] is not None and prof["stance"] < self.CONTINUE_MIN_STANCE:
+                continue                                  # undecided/No: a second message mostly moves them away
             job = {"kind": "continuation", "row": dict(row), "item": item, "target_author": item["actor"],
                    "target_post_id": (item.get("post") or {}).get("post_id")}
             break

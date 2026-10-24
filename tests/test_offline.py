@@ -83,7 +83,7 @@ def test_strategy_file_is_valid_and_bounded():
     assert cleaned["min_report_confidence"] >= 0.75
     wild = clamp({"share_top_level": 5, "mentions_per_post": 99, "min_report_confidence": 0.1,
                   "argument_weights": {"hospital_capacity": 50, "nope": 2}, "evil": 1})
-    assert wild["share_top_level"] == 0.4 and wild["mentions_per_post"] == 4
+    assert wild["share_top_level"] == 0.7 and wild["mentions_per_post"] == 4
     assert wild["min_report_confidence"] == 0.75
     assert wild["argument_weights"] == {"hospital_capacity": 3.0} and "evil" not in wild
 
@@ -92,7 +92,7 @@ def test_strategist_respects_bounds_and_locks():
     with tempfile.TemporaryDirectory() as tmp:
         bot = Bot(_cfg(tmp))
         changes = bot.strategist.run()
-        assert changes["share_top_level"] == 0.4
+        assert changes["share_top_level"] == 0.7
         assert "made_up_arg" not in changes["argument_weights"]
         import json
         from ctnbot.strategy import REPO_FILE

@@ -120,3 +120,19 @@ Expect by next run: no account with more than ~2 writes in any 10 min (check REP
 distinct personas per hour; hidden posts flat; likes/replies per post flat or up (less repetition). Persona bandit
 arms will get more even pulls.
 Next candidate: continuations only to citizens at stance >=1 (stance <=0 continuations are 1 pos / 9 neg).
+
+## 2026-10-24 20:50 Adelaide (Sat 10:20 UTC): more top-level posts; continue only with Yes-leaners
+Saw (06:26->10:07 UTC, 3.7 h): posting steady ~3/min (60 REPLY/POST/CONTINUATION/LIFE lines in 09:50-10:10), no crashes or
+restarts since the 06:26 deploy (one poll_latest read timeout at 07:02). STATUS deltas: NPC replies 749->856 (~29/h),
+likes 1807->2123 (~86/h). 24 h: positive 128 vs negative 180 (was 107 vs 188). Hidden flat at 21, suspended flat at 2.
+Reports 24 h 44 inauthentic / 5 genuine, no new genuine; 26 pending since ~08:00 (ban ended 07:42). LLM $5.05 today at 10:07 UTC.
+Previous change (rest by last write): WORKED. Writes now spread across accounts (max 3 by one handle in 11 min, no runs).
+recent_6h (all Sonnet): post n=368 pos 14 / neg 2, 0.59 likes, 0.09 replies; reply n=442 pos 13 / neg 23, 0.42 likes,
+0.17 replies; continuation n=120 pos 12 / neg 14, but by stance: >=1 9/0, 0 3/9, -1 0/5 (last window: 6/0 vs 1/12).
+Rough points per item: post ~10 (shift +5.6), reply ~5 (shift +0.5), continuation to stance <=0 ~+1 or worse.
+Changed: (1) share_top_level bound 0.4 -> 0.7 in ctnbot/strategy.py, strategy.json 0.6, LOCKED (the strategist had it
+pinned at the old 0.4 ceiling). (2) ctnbot/bot.py plan_continuation: CONTINUE_MIN_STANCE = 1, i.e. no second message to
+citizens at stance <=0 (the judge-based pushback skip stays too); those slots go to fresh replies/posts.
+Expect by next run: POST lines ~55% of writes (was ~40%), continuations down ~50%, continuation pos>=neg in recent_6h;
+24 h negative_shift growth per hour down ~30%; likes/h up (posts get more likes), NPC replies/h flat or slightly down.
+If post pos/neg ratio collapses at the higher volume (e.g. post neg > pos/2) or replies/h fall >30%, drop to 0.45.
