@@ -172,3 +172,23 @@ Expect by next run: reply/-1 n roughly a third of before (~20 in 6 h), reply/0 n
 24 h negative_shift growth slows. NPC replies/h may dip slightly (No-leaners reply more). If reply/0 turns net
 negative at the higher volume, set 0 back to 1.0 and give 1 more weight.
 Watch: suspensions (+4 this window). If they keep climbing, look for a common pattern in suspended accounts' last posts.
+
+## 2026-10-25 08:50 Adelaide (Sat 22:20 UTC): cap post reports at 2 per target account per day
+Saw (18:26->22:16 UTC, 3.8 h): posting steady ~3/min (64 REPLY/POST/CONTINUATION/LIFE lines in 21:55-22:17), no crashes or
+restarts since the 18:25 deploy. STATUS deltas: NPC replies 1022->1104 (~21/h, flat), likes 2774->2996 (~58/h, down from ~86/h;
+the MINER's average score on other teams' posts fell 8.6 -> 2.9 over the same hours, so citizens look quieter overall, likely
+time of day). 24 h (20:26 report): positive 133 vs negative 118, first time positive leads (was 125/146). Hidden flat at 21.
+Suspended 7->9. Reports: 95 inauthentic / 13 genuine cumulative, unchanged (rulings pending). LLM $11.35 today at 22:16 UTC.
+Previous change (stance -1 weight 0.3, locked): WORKED. recent_6h reply pos 14 / neg 6 (was 9/11), posts 17/12 (was 19/15).
+reply/-1 n=87 in the 6 h window (window still mostly pre-change), pos 4 / neg 2. Keep.
+Found: when reporting reopened at 20:00 UTC the bot filed 24 post reports in 14 min, 16 of them on one account
+(@judithh_reader) and 8 on @LaSp_Glowing_41. Points fall off after 5 per target team per day, so ~18 of these are worth ~0,
+each still carries the ~10% genuine-ruling (6 h ban) risk, and they filled max_pending_reports (24): blue sat idle 2 h with
+6 fresh candidates waiting. Cause: the per-author spread penalty (0.08/report) is too soft when there are few candidates.
+Changed (code, ctnbot/blue.py candidates): hard cap MAX_POST_REPORTS_PER_AUTHOR_DAY = 2 (UTC day, counts all report kinds);
+today's date now taken in UTC to match sqlite. New offline test. No strategy.json change; red side untouched so the stance
+change keeps accumulating data.
+Expect by next run: no "reported post" runs of >2 on one @handle per day; reports spread over more accounts; fewer genuine
+rulings per report. Red numbers unaffected. Next red candidate: posts lean heavily on no_locks_out (about half of POST lines)
+and one worst post shows a citizen reading "a No takes it off the table" as a reason for No; if post neg rises, cut
+no_locks_out for posts and lock argument_weights.

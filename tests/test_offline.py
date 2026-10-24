@@ -157,6 +157,27 @@ def test_pick_account_rests_recent_writers_even_if_recently_liked():
             assert row["account_id"] != hot["account_id"]
 
 
+def test_blue_caps_post_reports_per_author_per_day():
+    """One bot account was reported 16 times in 6 min: past 5/team/day that is ~0 points and pure ban risk."""
+    from ctnbot.blue import MAX_POST_REPORTS_PER_AUTHOR_DAY
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        now = time.time()
+        for aid, name in ((880001, "spam_bot_aa"), (880002, "OtherBot__77")):
+            bot.db.x("INSERT INTO accounts(account_id,username,npc_score,verified,suspended) VALUES(?,?,?,0,0)",
+                     (aid, name, 0.02))
+            for i in range(6):
+                bot.db.x("INSERT INTO posts(post_id,author_id,kind,body,created_at,status) VALUES(?,?,?,?,?,?)",
+                         (aid * 10 + i, aid, "post", "Vote NO on the mandate, it is government overreach #VoteNo " * 2,
+                          now - 60 * i, "visible"))
+        for i in range(MAX_POST_REPORTS_PER_AUTHOR_DAY):
+            bot.db.x("INSERT INTO reports(kind,target_id,author_id,confidence,created_at) VALUES('post',?,?,?,?)",
+                     (880001 * 10 + i, 880001, 0.98, now - 30))
+        authors = {r["author_id"] for _, r in bot.blue.candidates(limit=10)}
+        assert 880001 not in authors, authors
+        assert 880002 in authors, authors
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):

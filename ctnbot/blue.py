@@ -24,6 +24,9 @@ from .platform import AccountDead, NotReady, ReportingBlocked
 log = logging.getLogger("ctnbot.blue")
 
 RULING_SECONDS = 3 * 3600 + 15 * 60
+# Post reports per target account per (UTC) day. Points fall off after 5 reports per target TEAM a day,
+# and every extra report on one account is another ~10% chance of a GENUINE ruling (6 h ban) for ~0 points.
+MAX_POST_REPORTS_PER_AUTHOR_DAY = 2
 
 
 class BlueTeam:
@@ -57,7 +60,7 @@ class BlueTeam:
               AND p.body IS NOT NULL AND length(p.body) > 30
             ORDER BY p.created_at DESC LIMIT 300""",
                            (since, 1 - self._s("min_report_confidence", self.cfg.min_report_confidence)))
-        today = time.strftime("%Y-%m-%d")
+        today = time.strftime("%Y-%m-%d", time.gmtime())
         per_author_today = {r["author_id"]: r["c"] for r in self.db.all(
             "SELECT author_id, COUNT(*) c FROM reports WHERE date(created_at,'unixepoch')=? GROUP BY author_id", (today,))}
         # Points per target TEAM shrink after 5 reports a day. We can't see teams, but a team's accounts
@@ -69,6 +72,8 @@ class BlueTeam:
             per_sig_today[k] = per_sig_today.get(k, 0) + 1
         scored = []
         for r in rows:
+            if per_author_today.get(r["author_id"], 0) >= MAX_POST_REPORTS_PER_AUTHOR_DAY:
+                continue
             conf = 1 - (r["npc_score"] or 0)
             body = r["body"] or ""
             if LEADING_MENTIONS.match(body):
