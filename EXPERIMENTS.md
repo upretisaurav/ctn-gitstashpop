@@ -77,3 +77,23 @@ avg replies, avg likes, pos, neg. The strategist (12 h report) sees it too.
 Next run: (1) compare Sonnet vs Haiku rows on pos/neg per post and replies per post; if Sonnet is no better after
 ~6 h, set smart_all_writing 0. (2) Use by_target_stance: if reply/-1 (leaning No) has neg > pos, cut stance_weights
 "-1" to ~0.4 and lock it; if reply/0 (undecided) is net positive, raise "0" towards its upper bound.
+
+## 2026-10-24 12:50 Adelaide (Sat 02:20 UTC): engagement tracker was hours behind; fix it
+Saw (22:17->02:16 UTC, ~4 h): posting steady ~3/min (33 REPLY/POST/CONTINUATION/LIFE lines in 11 min at 02:05-02:16;
+posts_24h deltas shrank only because the busy first day is rolling out of the 24 h window). No crashes/restarts.
+24 h: 76 positive vs 177 negative shift, 10 hidden (+3), 2 suspended (+1, replaced, 40 active). Reports 75 inauthentic /
+8 genuine (3 genuine at ~01:40-01:58 UTC -> reporting banned until 07:42 UTC). LLM $1.13 today (UTC day) at 02:11.
+Sonnet-era 25-min learn lines (22:45-02:16 UTC): 24 positive (sum +5.8) vs 33 negative (sum -14.3); count ratio 0.73 vs
+~0.5 in the strategist's previous 4 h view, so slightly better, but still net negative. Most negative arm in that window:
+avoid_lockdown (5 pos / 8 neg; NPCs answer with "lockdowns hurt jobs" as a No reason). Continuations still net negative
+(7 pos / 11 neg).
+BUG: EngagementTracker scored 4 posts every 120 s (120/h) while we write ~180/h and each post needs two checks (25 min
+and 3 h). Oldest-first ordering meant first checks ran hours late (REPORT recent_6h came back EMPTY at 02:01: nothing
+made in the last 6 h had been scored), 3 h rechecks never happened, and STATUS npc_replies/likes, the bandit arms and
+the in-bot strategist were all working on 4-6 h old data. NPC replies/likes "per hour" in STATUS are capped by this too,
+so the drop to ~20 replies/h and ~37 likes/h this window is not a real engagement drop.
+Changed (code): tracker every 60 s, 12 posts per run (720/h capacity), newest first so the 25-min checks are fresh and
+the backlog drains behind them. No content/strategy change, so Sonnet and the strategist can be read on fresh data.
+Expect by next run: REPORT recent_6h populated with posts from the last few hours; STATUS npc_replies/likes deltas up
+(real rate, likely ~30+/h and ~55+/h); learn lines for posts ~25-30 min old. Then judge Sonnet (by_kind_model) and
+by_target_stance; if avoid_lockdown stays net negative on fresh data and the strategist hasn't cut it, cut it to ~0.4.

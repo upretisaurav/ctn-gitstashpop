@@ -126,7 +126,7 @@ class Bot:
             (25, self.blue_tick),
             (180, self.blue.check_rulings),
             (600, self.blue_accounts_tick),
-            (120, self.tracker_bg),
+            (60, self.tracker_bg),
             (900, self.refresh_news),
             (900, self.refresh_gifs_and_tags),
             (600, self.status_line),
@@ -190,7 +190,9 @@ class Bot:
         self._bg("strategist", self.strategist_tick)
 
     def track_some(self) -> None:
-        self.tracker.run_once(4)
+        # 12 a minute: we write ~3/min and each post is checked twice (25 min, 3 h), so 4 every 2 min fell
+        # hours behind and starved the learner, strategist and STATUS counters of fresh data.
+        self.tracker.run_once(12)
 
     def _later(self, seconds: float, fn: Callable, *args) -> None:
         self._seq += 1

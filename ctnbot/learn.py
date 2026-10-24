@@ -76,11 +76,12 @@ class EngagementTracker:
         self.bandit = bandit
 
     def run_once(self, limit: int = 6) -> None:
+        # Newest first: fresh 25-min checks feed the learner while any older backlog drains behind them.
         now = time.time()
         rows = self.db.all("""SELECT * FROM our_posts WHERE status='visible' AND post_id < 9000000000 AND (
                                 (checked_at = 0 AND created_at < ?) OR
                                 (checked_at > 0 AND checked_at < created_at + 3600 AND created_at < ?))
-                              ORDER BY created_at LIMIT ?""", (now - 25 * 60, now - 3 * 3600, limit))
+                              ORDER BY created_at DESC LIMIT ?""", (now - 25 * 60, now - 3 * 3600, limit))
         for row in rows:
             try:
                 self._score(row)
