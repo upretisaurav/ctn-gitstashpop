@@ -193,7 +193,7 @@ class Bot:
     def hidden_sweep_bg(self) -> None:
         self._bg("hidden_sweep", self.hidden_sweep)
 
-    def hidden_sweep(self, limit: int = 150) -> None:
+    def hidden_sweep(self, limit: int = 400) -> None:
         """Find our posts that moderators hid AFTER the tracker's 25 min / 3 h checks. Every suspension so far was
         'reported, already had a hidden post, 100+ actions', and most of those hidden posts were never seen by us,
         so the account kept going until another team's account report landed. Check the busiest accounts' recent
@@ -206,8 +206,14 @@ class Bot:
                               WHERE a.status='active' AND a.actions >= 40 AND p.status='visible' AND p.post_id < 9000000000
                                 AND p.created_at > ? AND p.created_at < ?
                               ORDER BY a.actions DESC, p.created_at DESC""", (now - 48 * 3600, now - 20 * 60))
+        # Least-recently-checked first (never-checked first), busiest account breaking ties. Ordering by account
+        # actions alone re-checked the top few accounts every hour and never reached the rest: with ~8k posts in
+        # 48 h and 150 reads a run, 4 more accounts were suspended in 2 h while the sweep found 1 hidden post.
+        due = [r for r in rows if now - hc.get(r["post_id"], 0) > 3600]
+        due.sort(key=lambda r: hc.get(r["post_id"], 0))  # stable: keeps the actions DESC order within ties
         found = 0
-        for r in [r for r in rows if now - hc.get(r["post_id"], 0) > 3600][:limit]:
+        batch = due[:limit]
+        for r in batch:
             hc[r["post_id"]] = now
             try:
                 post = self.p.read("get_post", r["post_id"])
@@ -218,6 +224,9 @@ class Bot:
                 found += 1
                 self.db.x("UPDATE our_posts SET status='hidden' WHERE post_id=?", (r["post_id"],))
                 log.warning("hidden sweep: our post %s was hidden by moderators (account %s)", r["post_id"], r["account_id"])
+        never = sum(1 for r in rows if r["post_id"] not in hc)
+        log.info("hidden sweep: checked %d of %d due (%d never checked), found %d hidden", len(batch), len(due),
+                 never, found)
         if found:
             self.ensure_retirements()
 
