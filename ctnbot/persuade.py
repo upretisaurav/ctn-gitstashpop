@@ -165,10 +165,23 @@ class Writer:
     # ------------------------------------------------------------- judging
     def judge_shift(self, our_post: str, their_reply: str) -> tuple[float, bool]:
         """How far did this citizen's answer move towards our side? (-1..1, moved?)"""
-        user = (f"JUDGE_SHIFT\nA citizen replied to a pro-{self.cfg.side_label} post.\nPOST: {our_post[:400]}\n"
-                f"REPLY: {their_reply[:500]}\n\nReturn JSON {{\"shift\": -1..1, \"moved\": true|false}} where shift is "
-                f"how much the reply shows them moving towards {self.cfg.side_label} (negative = away), and moved "
-                f"is true only if they explicitly concede or say they are reconsidering.")
+        # The bare "pro-Vote Yes" framing misread short agreeing replies: "exactly. the delay if we vote no would
+        # be a nightmare" was scored -1.0 (the words "vote no" pulled it negative). Spell out the sides and that
+        # agreeing with the post counts as towards the post's side.
+        yes_side = self.cfg.side == "yes"
+        side_desc = ("YES = for requiring proof of H2D2 vaccination to enter public spaces (phased in); "
+                     "NO = against it / keep it voluntary")
+        user = (f"JUDGE_SHIFT\nReferendum: should proof of H2D2 vaccination be required to enter public spaces? "
+                f"{side_desc}.\nThe POST below argues for {'YES' if yes_side else 'NO'}. A citizen replied.\n"
+                f"POST: {our_post[:400]}\nREPLY: {their_reply[:500]}\n\n"
+                f"Score the REPLY's direction relative to the POST's side ({'YES' if yes_side else 'NO'}):\n"
+                f"+ positive if the reply agrees with the post (e.g. 'exactly', 'same here'), supports its "
+                f"argument, or says it is leaning or voting {'YES' if yes_side else 'NO'} (even if it mentions the "
+                f"other option, e.g. 'voting no would be a nightmare' is positive for YES);\n"
+                f"- negative only if it argues against the post or for {'NO' if yes_side else 'YES'};\n"
+                f"0 if it is off-topic, chit-chat or genuinely mixed.\n"
+                f"Return JSON {{\"shift\": -1..1, \"moved\": true|false}}; moved is true only if they explicitly "
+                f"concede or say they are reconsidering towards {'YES' if yes_side else 'NO'}.")
         text, _ = self.llm.complete("You judge stance shifts in short social media replies. Answer with JSON only.",
                                     user, smart=False, max_tokens=60, temperature=0.0, cache_system=False)
         o = extract_json(text) or {}
