@@ -42,6 +42,10 @@ DEFAULTS: dict[str, Any] = {
     "target_active_accounts": 12,
     "smart_reply_min_persuadable": 0.55,
     "smart_all_writing": 0.0,
+    "spotlight_every_min": 20,
+    "spotlight_likes": 35,
+    "spotlight_reposts": 12,
+    "spotlight_replies": 6,
     "gif_rate": 0.2,
     "hashtag_rate": 0.4,
     "lowercase_rate": 0.12,
@@ -61,13 +65,17 @@ NUM_BOUNDS = {
     "target_active_accounts": (1, 50),
     "smart_reply_min_persuadable": (0.0, 1.0),
     "smart_all_writing": (0.0, 1.0),
+    "spotlight_every_min": (0, 240),
+    "spotlight_likes": (0, 39),
+    "spotlight_reposts": (0, 40),
+    "spotlight_replies": (0, 20),
     "gif_rate": (0.0, 0.5),
     "hashtag_rate": (0.0, 0.8),
     "lowercase_rate": (0.0, 0.3),
     "like_reply_targets": (0.0, 1.0),
     "follow_engaged": (0.0, 1.0),
 }
-INT_KEYS = {"extra_mentions_per_reply", "mentions_per_post", "boost_likes_per_post", "max_pending_reports",
+INT_KEYS = {"spotlight_every_min", "spotlight_likes", "spotlight_reposts", "spotlight_replies", "extra_mentions_per_reply", "mentions_per_post", "boost_likes_per_post", "max_pending_reports",
             "reply_fresh_seconds", "target_active_accounts"}
 WEIGHT_BOUNDS = (0.2, 3.0)
 STANCE_BOUNDS = (0.0, 2.0)

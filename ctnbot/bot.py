@@ -111,6 +111,9 @@ class Bot:
         self.busy_people: set = set()
         self.plan_backoff_until = 0.0
         self._bg_threads: dict = {}
+        self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
+        self._last_spotlight = 0.0
+        self._privacy_done: set = set(self.db.get("private_accounts", []) or [])
         self._last_tick_hook = 0.0
 
     # ======================================================================
@@ -128,6 +131,7 @@ class Bot:
             (600, self.blue_accounts_tick),
             (60, self.tracker_bg),
             (600, self.hidden_sweep_bg),
+            (20, self.ensure_private),
             (900, self.refresh_news),
             (900, self.refresh_gifs_and_tags),
             (600, self.status_line),
@@ -255,6 +259,7 @@ class Bot:
     def poll_trending(self) -> None:
         posts = self.p.feed("trending", 50)
         self.cls.ingest(posts)
+        self.spotlight_status(posts)
         self.db.put("trending_authors", list({p["author_id"] for p in posts}))
 
     def refresh_news(self) -> None:
@@ -410,7 +415,7 @@ class Bot:
     # worker threads write the text with the LLM in parallel; the main thread sends finished drafts the
     # moment a write slot opens. Before this, every write waited ~25 s on the LLM, so we used ~2 of the
     # 3 writes a minute the team is allowed.
-    KIND_ORDER = {"continuation": 0, "reply": 1, "post": 2, "life": 3}
+    KIND_ORDER = {"continuation": 0, "boost_reply": 1, "boost_repost": 1, "reply": 2, "post": 3, "life": 4}
     CONTINUE_MIN_SHIFT = -0.4      # skip a continuation when their answer to us reads at or below this
     CONTINUE_MIN_STANCE = 1        # only continue with citizens already leaning Yes (stance <=0 scored 3 up / 14 down)
 
@@ -434,6 +439,7 @@ class Bot:
 
     def _plan(self):
         return (self.plan_continuation()
+                or self.plan_boost()
                 or (random.random() < self.strategy["share_top_level"] and self.plan_top_level())
                 or self.plan_reply()
                 or self.plan_top_level())
@@ -473,7 +479,9 @@ class Bot:
     def _compose_safe(self, job):
         try:
             return {"continuation": self.compose_continuation, "reply": self.compose_reply,
-                    "post": self.compose_top_level, "life": self.compose_life}[job["kind"]](job)
+                    "post": self.compose_top_level, "life": self.compose_life,
+                    "boost_reply": self.compose_boost_reply, "boost_repost": lambda j: dict(j, text="(repost)", model="none"),
+                    }[job["kind"]](job)
         except Exception as e:
             log.warning("drafting %s failed: %s", job.get("kind"), e)
             return None
@@ -496,7 +504,13 @@ class Bot:
                               (job["row"]["account_id"],))
             if row is None:
                 return
-            if job["kind"] in ("reply", "continuation"):
+            if job["kind"] == "boost_repost":
+                self._send_boost_repost(row, job)
+            elif job["kind"] == "boost_reply":
+                if self._send_reply(row, job["target"], job["text"], "boost", None, None, job["model"]):
+                    job["spot"]["replies_done"] += 1
+                    job["spot"]["reply_texts"].append(job["text"])
+            elif job["kind"] in ("reply", "continuation"):
                 if self._send_reply(row, job["target"], job["text"], job["kind"], job.get("arg"),
                                     job["target_author"], job["model"], mentions=job.get("mentions") or []):
                     self._engage(row, job)
@@ -507,12 +521,132 @@ class Bot:
                     return
                 self._record(out, row, job["kind"], job.get("arg"), None, None, job["text"], job["model"],
                              job.get("mentions") or [])
-                if job["kind"] == "post":
+                if job["kind"] == "post" and self._spotlight_due():
+                    self.start_spotlight(out, row, job["text"])
+                elif job["kind"] == "post":
                     for i in range(int(self.strategy["boost_likes_per_post"])):
                         self._later(random.uniform(60, 420) * (i + 1), self._boost_like, out.get("post_id"),
                                     row["account_id"])
         finally:
             self._release(job)
+
+    # ---- 0. spotlight: push one of our posts into Trending ------------------
+    # Trending is where citizens see posts (top Trending posts get 100-300 citizen views; our ordinary posts get ~3).
+    # Its hot score is roughly 2.5*ln(1+likes) + 2.5*ln(1+replies) + 2.7*ln(1+reposts) + 0.5*ln(1+views) - 1.26*age_h,
+    # so every top team stacks likes, reposts and replies from its own accounts on a few posts. Likes have their own
+    # 30/min budget; reposts and replies come out of the 3 writes/min, so we spotlight one post every ~20 minutes.
+    def _spotlight_due(self) -> bool:
+        every = int(self.strategy["spotlight_every_min"])
+        return every > 0 and time.time() - self._last_spotlight >= every * 60
+
+    def start_spotlight(self, out, row, text) -> None:
+        pid = (out or {}).get("post_id")
+        if not pid:
+            return
+        self._last_spotlight = time.time()
+        spot = {"post_id": pid, "root": pid, "author": row["account_id"], "body": text, "started": time.time(),
+                "used": {row["account_id"]}, "reposts_left": int(self.strategy["spotlight_reposts"]),
+                "replies_left": int(self.strategy["spotlight_replies"]), "replies_done": 0, "reposts_done": 0,
+                "reply_texts": [], "likes": 0}
+        self.spotlights.append(spot)
+        self.spotlights = self.spotlights[-6:]
+        exposed = self._exposed()
+        likers = [r for r in self.db.our_accounts("active") if r["account_id"] != row["account_id"]
+                  and r["account_id"] not in exposed]
+        random.shuffle(likers)
+        for i, r in enumerate(likers[: int(self.strategy["spotlight_likes"])]):
+            self._later(4 + i * 2.3 + random.uniform(0, 1.5), self._spot_like, dict(r), pid, spot)
+        log.info("SPOTLIGHT start post %s by @%s: %d likes, %d reposts, %d replies queued", pid, row["username"],
+                 min(len(likers), int(self.strategy["spotlight_likes"])), spot["reposts_left"], spot["replies_left"])
+
+    def _spot_like(self, row, post_id, spot) -> None:
+        if not self.limits.like.available():
+            self._later(3, self._spot_like, row, post_id, spot)       # likes have their own budget; wait our turn
+            return
+        try:
+            self.p.like(row, post_id)
+            spot["likes"] += 1
+        except Exception as e:
+            log.debug("spotlight like failed: %s", e)
+
+    def plan_boost(self):
+        """Reposts and supportive replies for live spotlights, spread over their first ~40 minutes."""
+        now = time.time()
+        live = [s for s in self.spotlights if now - s["started"] < 45 * 60 and (s["reposts_left"] > 0 or s["replies_left"] > 0)]
+        if not live:
+            return None
+        spot = live[0]
+        # pace: don't spend more than ~1 in 3 write slots on boosting
+        if random.random() > 0.4:
+            return None
+        exclude = set(self.busy_accounts) | spot["used"] | self._exposed()
+        row = self.pick_account(exclude=exclude, rest_seconds=300)
+        if row is None or row["account_id"] in exclude:
+            return None
+        spot["used"].add(row["account_id"])
+        do_reply = spot["replies_left"] > 0 and (spot["reposts_left"] <= 0 or random.random() < 0.4)
+        if do_reply:
+            spot["replies_left"] -= 1
+            target = {"post_id": spot["post_id"], "root_post_id": spot["root"], "body": spot["body"],
+                      "reply_to_post_id": None, "author_id": spot["author"]}
+            return {"kind": "boost_reply", "row": dict(row), "spot": spot, "target": target,
+                    "target_post_id": None, "target_author": None}
+        spot["reposts_left"] -= 1
+        return {"kind": "boost_repost", "row": dict(row), "spot": spot, "target_post_id": None, "target_author": None}
+
+    def compose_boost_reply(self, job):
+        row, spot = job["row"], job["spot"]
+        text, model = self.writer.spotlight_reply(persona_key=row["persona_key"], display_name=row["display_name"],
+                                                  post_body=spot["body"], earlier=spot["reply_texts"])
+        if not text:
+            return None
+        job.update(text=self._humanize(text), model=model)
+        return job
+
+    def _send_boost_repost(self, row, job) -> None:
+        spot = job["spot"]
+        try:
+            out = self.p.repost(row, spot["post_id"])
+        except AccountDead:
+            return
+        except Exception as e:
+            log.info("spotlight repost failed: %s", e)
+            return
+        spot["reposts_done"] += 1
+        pid = (out or {}).get("post_id")
+        if pid:
+            self.db.x("""INSERT OR REPLACE INTO our_posts(post_id,account_id,persona_key,kind,argument,target_id,
+                         target_post,mentions,body,model,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                      (pid, row["account_id"], row["persona_key"], "repost", None, None, spot["post_id"], "[]",
+                       "", "none", time.time()))
+
+    def spotlight_status(self, trending: list) -> None:
+        mine = {s["post_id"]: s for s in self.spotlights}
+        ranks = {p["post_id"]: (i + 1, round(p.get("global_hot_score") or 0, 1)) for i, p in enumerate(trending)}
+        for pid, s in mine.items():
+            if time.time() - s["started"] > 4 * 3600:
+                continue
+            rk = ranks.get(pid)
+            last = s.get("_logged_rank")
+            if rk != last and (rk or last):
+                s["_logged_rank"] = rk
+                log.info("SPOTLIGHT status post %s: trending %s (age %.0f min, likes %d, reposts %d, replies %d)", pid,
+                         f"#{rk[0]} hot {rk[1]}" if rk else "not in top 50", (time.time() - s["started"]) / 60,
+                         s["likes"], s["reposts_done"], s["replies_done"])
+
+    # ---- privacy: hide join date, likes and history from other teams' blue bots --------------------------------
+    def ensure_private(self) -> None:
+        for row in self.db.our_accounts("active"):
+            if row["account_id"] in self._privacy_done:
+                continue
+            try:
+                self.p.set_private(row)
+                self._privacy_done.add(row["account_id"])
+                self.db.put("private_accounts", sorted(self._privacy_done))
+                log.info("made @%s private", row["username"])
+            except Exception as e:
+                log.info("could not make @%s private: %s", row["username"], e)
+            return                                   # one per tick
 
     # ---- 1. conversations ------------------------------------------------
     def plan_continuation(self):

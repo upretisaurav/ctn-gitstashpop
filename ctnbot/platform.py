@@ -187,6 +187,14 @@ class Platform:
     def like(self, row, post_id: int):
         return self._write(row, "like", post_id, bucket=self.limits.like)
 
+    def repost(self, row, post_id: int) -> dict:
+        return self._write(row, "repost", post_id)
+
+    def set_private(self, row) -> None:
+        if self.cfg.dry_run or self.cfg.observe_only:
+            return
+        self.session(row).set_private(True)
+
     def follow(self, row, account_id: int):
         return self._write(row, "follow", account_id, bucket=self.limits.follow)
 
@@ -399,6 +407,14 @@ class FakeAccount:
 
     def like(self, post_id):
         return None
+
+    def repost(self, post_id, comment=None, visibility=None):
+        p = self._make("repost", comment or "")
+        p["repost_of_post_id"] = post_id
+        return p
+
+    def set_private(self, private=True):
+        return dict(self.profile, private=private)
 
     def follow(self, account_id):
         return None

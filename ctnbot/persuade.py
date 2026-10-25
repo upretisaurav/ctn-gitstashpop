@@ -142,6 +142,19 @@ class Writer:
         text, model = self.llm.complete(self.system, user, smart=smart, max_tokens=260)
         return self.clean(text), model
 
+    def spotlight_reply(self, *, persona_key: str, display_name: str, post_body: str, earlier: list[str]) -> tuple[str, str]:
+        """A neighbour chiming in under a post they agree with: short, personal, adds one new detail."""
+        seen = "\n".join(f"  - {e[:160]}" for e in earlier[-6:]) or "  (none yet)"
+        user = (f"{persona_card(persona_key, display_name)}\n\n"
+                f"A neighbour posted: \"{post_body[:450]}\"\n"
+                f"Other replies so far:\n{seen}\n\n"
+                f"Write a short reply (under 180 characters) as yourself, chiming in because it rings true for you. "
+                f"Add ONE new detail from your own life or job that backs it up. Do not repeat their words or the other "
+                f"replies, no slogans, no 'great post', no hashtags. A light question to others is fine. "
+                f"Output only the reply.")
+        text, model = self.llm.complete(self.system, user, smart=False, max_tokens=120)
+        return self.clean(text), model
+
     def life_post(self, *, persona_key: str, display_name: str) -> tuple[str, str]:
         topic = random.choice(LIFE_TOPICS)
         user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\nWrite a casual everyday post (under 180 "

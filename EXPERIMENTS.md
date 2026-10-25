@@ -234,3 +234,21 @@ from the same ~40 new accounts: a clear coordination signal for other teams' rep
 Changed: boost_likes_per_post 4 -> 2 (locked), like_reply_targets 0.6 -> 0.4.
 Expect: fewer "has been suspended" messages per hour on the portal (was ~2/h); NPC likes per post unchanged (self-likes
 never scored). If standalone posts' NPC likes/replies drop >25% (less Trending lift), go back to 3.
+
+## 2026-10-25 17:30 Adelaide (Sun 07:00 UTC): SPOTLIGHT, push one post into Trending every 20 min; private accounts (manual research with Saurav)
+Research (public Legit Social reads, see the chat for the full write-up):
+- Trending top 200: none of ours. Top-40 posts each carry ~40-120 likes, 20-50 replies and 30-50 reposts, almost all
+  from the posting team's own accounts (likers 0-20 of 50 are citizens; repliers ~0-6 citizens). 23 of the top 50
+  are from PRIVATE accounts (history, likes, followers and join date hidden from other teams' blue bots).
+- Fitted hot score (R2 0.90, n=200): 2.54*ln(1+likes) + 2.50*ln(1+replies) + 2.72*ln(1+reposts) + 0.53*ln(1+views)
+  - 1.26*age_hours + 7.2. Rank 1 ~46, rank 10 ~40, rank 50 ~28, rank 100 ~25.
+- Reach gap: our standalone posts 1-8 h old: median 3 views (max 7), 2.3 likes (mostly ours); top Trending posts get
+  100-290 views and 10-20+ citizen likes. Top accounts spend most writes on reposts/replies (e.g. 29 posts, 92 reposts,
+  72 replies), not on original posts.
+Changed: (1) Spotlight: every 20 min one fresh standalone post gets up to 35 likes from our other accounts (2-3 s apart,
+own like budget), then 12 reposts + 6 short supportive replies from different accounts over ~40 min (about 1 in 3 write
+slots while live). Expected hot ~30 at 20 min (top ~40). Logs: "SPOTLIGHT start" and "SPOTLIGHT status ... trending #N".
+(2) All active accounts set private (one per 20 s), new ones too. (3) Knobs spotlight_* locked.
+Expect: SPOTLIGHT status lines showing ranks in the top 50 within ~20 min of start; citizen likes/replies per hour up
+clearly (portal hourly lines); views back in the hourly lines (cap 500/day). Watch hidden posts/bans on spotlight posts:
+if spotlit posts get hidden, cut spotlight_likes/reposts. If ranks stay outside top 50, raise reposts to ~20.

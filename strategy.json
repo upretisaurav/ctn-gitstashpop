@@ -40,7 +40,15 @@
     "min_report_confidence",
     "share_top_level",
     "smart_all_writing",
+    "spotlight_every_min",
+    "spotlight_likes",
+    "spotlight_replies",
+    "spotlight_reposts",
     "stance_weights"
   ],
-  "smart_all_writing": 1.0
+  "smart_all_writing": 1.0,
+  "spotlight_every_min": 20,
+  "spotlight_likes": 35,
+  "spotlight_reposts": 12,
+  "spotlight_replies": 6
 }

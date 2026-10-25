@@ -178,6 +178,33 @@ def test_blue_caps_post_reports_per_author_per_day():
         assert 880002 in authors, authors
 
 
+def test_spotlight_queues_likes_reposts_and_replies():
+    import random as _r
+    _r.seed(3)
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        for _ in range(8):
+            bot.create_account()
+        rows = bot.db.our_accounts("active")
+        out = bot.p.post(rows[0], "Thirty years on the ferry and I'm backing this one.")
+        bot.start_spotlight(out, rows[0], "Thirty years on the ferry and I'm backing this one.")
+        assert len(bot.delayed) >= 5                  # likes from the other accounts are queued
+        spot = bot.spotlights[-1]
+        kinds = []
+        for _ in range(60):
+            job = bot.plan_boost()
+            if job is None:
+                continue
+            kinds.append(job["kind"])
+            if job["kind"] == "boost_repost":
+                bot._send_boost_repost(bot.db.one("SELECT * FROM our_accounts WHERE account_id=?",
+                                                  (job["row"]["account_id"],)), job)
+        assert "boost_repost" in kinds and "boost_reply" in kinds, kinds
+        assert spot["reposts_done"] >= 1
+        assert rows[0]["account_id"] not in {j for j in spot["used"] if j != rows[0]["account_id"]}
+        assert bot.db.one("SELECT COUNT(*) c FROM our_posts WHERE kind='repost'")["c"] >= 1
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):
