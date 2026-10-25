@@ -292,3 +292,13 @@ gets spotlit (fallback: any post if none is sent within 15 min). Spotlight size/
 Expect: spotlights keep reaching the top 10; citizen likes per spotlight similar or higher (>=10), and the first
 citizen replies on spotlit posts. Next review: if citizen likes per spotlight stay < 8 with 0 replies, try
 spotlight_every_min 90 (cuts the write cost by a third); if >= 15, keep.
+
+## 2026-10-25 22:00 Adelaide (Sun 11:30 UTC): spotlight paying off; keep it (manual check with Saurav)
+Portal hourly red: 18:49 +351, 19:49 +564, 20:49 +928 (best hour so far: 49 likes, 2 PRIMARY changes of mind towards
+our side, 2 primary on vaccination towards neither). Score 31,152, 20th; over 18:12->21:46 we gained ~2.4k, about
+the same as #10-11 (Works In Theory, SI) in that window.
+Spotlit posts stay high for hours: 463402 (3 h old) Trending #29, 467534 #16, 471468 #9, 473694 #5; citizen likes
+accumulate with age (15, 10, 4, 1). Zero citizen replies on spotlit posts so far.
+Bans rose again: 28 -> 35 banned (83 registered) since 18:12.
+Fix: the hourly spotlight timer is now stored in the DB, so a deploy/restart no longer starts an extra spotlight
+early (10:35 restart fired one 36 min after the previous).

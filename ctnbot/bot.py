@@ -112,7 +112,7 @@ class Bot:
         self.plan_backoff_until = 0.0
         self._bg_threads: dict = {}
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
-        self._last_spotlight = 0.0
+        self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
         self._privacy_done: set = set(self.db.get("private_accounts", []) or [])
         self._last_tick_hook = 0.0
 
@@ -549,6 +549,7 @@ class Bot:
         if not pid:
             return
         self._last_spotlight = time.time()
+        self.db.put("last_spotlight", self._last_spotlight)
         spot = {"post_id": pid, "root": pid, "author": row["account_id"], "body": text, "started": time.time(),
                 "used": {row["account_id"]}, "used_reply": {row["account_id"]}, "used_repost": {row["account_id"]},
                 "reposts_left": int(self.strategy["spotlight_reposts"]),
