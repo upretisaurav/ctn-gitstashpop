@@ -222,7 +222,7 @@ Expect by next run: "never checked" backlog falls to ~0 within ~2 h; several "hi
 then suspensions grow < 1/h (was ~2/h). If backlog stays large, raise limit or drop the window to 24 h. If sweeps find
 nothing yet suspensions continue, hidden posts may still return 200 from get_post: check the payload fields.
 
-## 2026-10-25 15:40 Adelaide (Sun 05:10 UTC): less coordinated self-liking (manual, with Saurav)
+## 2026-10-25 15:40 Adelaide (Sun 05:10 UTC, deployed ~05:15): less coordinated self-liking (manual, with Saurav)
 Saw: score 27,840 (22nd). Last ~5 h +2,054 (~410/h); top-10 teams did ~700-1,400/h in the same window (Operation Swan
 +6.9k, i wanna go to china +5.9k, Vertex +4.1k). Portal: 75 registered, 25 banned (+9 since 10:15). Every ban is an
 account report after a moderator-hidden post; our accounts are all far past 100 actions (TheRealMateoSilva 779) mostly
@@ -235,7 +235,7 @@ Changed: boost_likes_per_post 4 -> 2 (locked), like_reply_targets 0.6 -> 0.4.
 Expect: fewer "has been suspended" messages per hour on the portal (was ~2/h); NPC likes per post unchanged (self-likes
 never scored). If standalone posts' NPC likes/replies drop >25% (less Trending lift), go back to 3.
 
-## 2026-10-25 17:30 Adelaide (Sun 07:00 UTC): SPOTLIGHT, push one post into Trending every 20 min; private accounts (manual research with Saurav)
+## 2026-10-25 16:00 Adelaide (Sun 05:30 UTC): SPOTLIGHT, push one post into Trending every 20 min; private accounts (manual research with Saurav)
 Research (public Legit Social reads, see the chat for the full write-up):
 - Trending top 200: none of ours. Top-40 posts each carry ~40-120 likes, 20-50 replies and 30-50 reposts, almost all
   from the posting team's own accounts (likers 0-20 of 50 are citizens; repliers ~0-6 citizens). 23 of the top 50
@@ -252,3 +252,9 @@ slots while live). Expected hot ~30 at 20 min (top ~40). Logs: "SPOTLIGHT start"
 Expect: SPOTLIGHT status lines showing ranks in the top 50 within ~20 min of start; citizen likes/replies per hour up
 clearly (portal hourly lines); views back in the hourly lines (cap 500/day). Watch hidden posts/bans on spotlight posts:
 if spotlit posts get hidden, cut spotlight_likes/reposts. If ranks stay outside top 50, raise reposts to ~20.
+
+Early result (manual check 06:00 UTC): first spotlight post 452902 (started 05:33) at 11 min: 35 likes, 3 replies,
+8 reposts, 35 views, Trending #50 (hot 28.1); at 18 min: 36 likes, 6 replies, 12 reposts, 37 views, Trending #32
+(hot 31.8). Our ordinary posts get ~3 views. Trending cut-offs now: #10 hot 39.6, #50 28.2, #100 24.7.
+Tuning idea once citizen likes/replies on spotlit posts are measured: more reposts/replies per spotlight
+(e.g. 25 reposts + 12 replies, every 30 min) to reach the top 10, if citizen engagement per spotlight justifies the slots.
