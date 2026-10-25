@@ -302,3 +302,20 @@ accumulate with age (15, 10, 4, 1). Zero citizen replies on spotlit posts so far
 Bans rose again: 28 -> 35 banned (83 registered) since 18:12.
 Fix: the hourly spotlight timer is now stored in the DB, so a deploy/restart no longer starts an extra spotlight
 early (10:35 restart fired one 36 min after the previous).
+
+## 2026-10-26 00:45 Adelaide (Sun 14:15 UTC): spotlight every 90 min instead of 60 (scheduled review)
+Saw (11:35->14:15 UTC, no restarts/crashes since the 11:35 deploy; a few transient poll timeouts): posts_24h ~4,190
+(~175/h incl. spotlight reposts/boosts). STATUS 13:05->14:15: NPC replies +32 (~27/h), NPC likes +90 (~77/h).
+REPORT 13:35 (24 h): replies 568, likes 1,770, positive 151 vs negative 105; recent_6h top-level posts pos 14 / neg 16
+(still net negative by count, net positive in points), replies 16 / 9. Hidden 14 in 24 h; suspended 17 -> 18.
+Reports 150 inauthentic / 15 genuine; reporting blocked until 14:39 UTC. LLM $6.64 today.
+Previous change (spotlight uses best argument no_locks_out): spotlights reliably reach Trending #4-#9 (481181 #7,
+485040 #4). Public counters, citizen = id <= 2343: 463402 15 likes, 467534 10, 471468 4, 473694 5, 477471 9,
+481181 3 (1.5 h), 485040 1 (35 min); ZERO citizen replies on all seven; no recorded shifts on spotlit posts.
+Cost/benefit per hour: a spotlight buys ~5-10 citizen likes (25-50 pts; views add nothing as ~4k posts/day already
+fill the 500/day view cap) but uses ~54 writes (boost+repost) that earn ~3.3 pts each vs ~11 for an ordinary
+reply/post/continuation (engagement + shift points from REPORT recent_6h) -> roughly -400 pts/h net.
+Per the decision rule (citizen likes per spotlight < ~8 average, 0 replies) -> spotlight_every_min 60 -> 90 (locked).
+Size unchanged (needed to reach the top 10).
+Expect: ~18 more persuasive writes/h; NPC replies/h +2-3 and likes/h +5; citizen likes per spotlight unchanged.
+Next review: if hourly red does not fall, try 120-180 or stop (0); if it falls clearly, go back to 60.
