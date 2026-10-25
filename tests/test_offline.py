@@ -201,7 +201,7 @@ def test_spotlight_queues_likes_reposts_and_replies():
                                                   (job["row"]["account_id"],)), job)
         assert "boost_repost" in kinds and "boost_reply" in kinds, kinds
         assert spot["reposts_done"] >= 1
-        assert rows[0]["account_id"] not in {j for j in spot["used"] if j != rows[0]["account_id"]}
+        assert rows[0]["account_id"] in spot["used_reply"]
         assert bot.db.one("SELECT COUNT(*) c FROM our_posts WHERE kind='repost'")["c"] >= 1
 
 

@@ -258,3 +258,17 @@ Early result (manual check 06:00 UTC): first spotlight post 452902 (started 05:3
 (hot 31.8). Our ordinary posts get ~3 views. Trending cut-offs now: #10 hot 39.6, #50 28.2, #100 24.7.
 Tuning idea once citizen likes/replies on spotlit posts are measured: more reposts/replies per spotlight
 (e.g. 25 reposts + 12 replies, every 30 min) to reach the top 10, if citizen engagement per spotlight justifies the slots.
+
+## 2026-10-25 18:30 Adelaide (Sun 08:00 UTC): spotlight result: Trending #30-50 reaches no citizens; go bigger (manual, with Saurav)
+Result of 6 spotlights (05:33-07:25 UTC): every one reached Trending #30-#50 within ~10-15 min and held ~90 min, but
+public counters show 37-41 views (≈ our own likers/reposters) and ZERO citizen likes or replies on all six. Portal
+hourly red: 15:49 +229, 16:49 +386, 17:49 +311 Adelaide, no lift (and the boosts used ~30% of write slots). Bans slowed:
+3 in ~2.5 h after accounts went private (was ~2/h).
+Top-Trending posts that do get citizen likes (6-21 of their first 50 likers) sit at roughly #1-#20, hot 35-46, with
+40-50 replies and 40-50 reposts each. So citizens evidently read only the top of Trending; #30-50 is invisible.
+Changed: same write budget, concentrated: ONE spotlight per 60 min with 39 likes, 30 reposts, 24 replies (each account
+may do one reply AND one repost; boosting takes ~60% of slots while live so it peaks within ~30 min). Predicted hot
+~36-38 at peak (about #10-20) before any organic engagement.
+DECISION RULE for the next review: check counters/likers of the SPOTLIGHT posts (public API, no login: likers whose
+usernames look like name+birth-year, e.g. john1964, are citizens). If after 2 spotlights none reaches the top 15 or
+gets >=5 citizen likes within 2 h, set spotlight_every_min to 0 (stop) and give the slots back to replies.

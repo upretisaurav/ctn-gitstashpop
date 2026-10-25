@@ -545,7 +545,8 @@ class Bot:
             return
         self._last_spotlight = time.time()
         spot = {"post_id": pid, "root": pid, "author": row["account_id"], "body": text, "started": time.time(),
-                "used": {row["account_id"]}, "reposts_left": int(self.strategy["spotlight_reposts"]),
+                "used": {row["account_id"]}, "used_reply": {row["account_id"]}, "used_repost": {row["account_id"]},
+                "reposts_left": int(self.strategy["spotlight_reposts"]),
                 "replies_left": int(self.strategy["spotlight_replies"]), "replies_done": 0, "reposts_done": 0,
                 "reply_texts": [], "likes": 0}
         self.spotlights.append(spot)
@@ -576,15 +577,16 @@ class Bot:
         if not live:
             return None
         spot = live[0]
-        # pace: don't spend more than ~1 in 3 write slots on boosting
-        if random.random() > 0.4:
+        # pace: about 3 in 5 write slots while a spotlight is live, so it peaks within ~30 minutes
+        if random.random() > 0.6:
             return None
-        exclude = set(self.busy_accounts) | spot["used"] | self._exposed()
-        row = self.pick_account(exclude=exclude, rest_seconds=300)
+        do_reply = spot["replies_left"] > 0 and (spot["reposts_left"] <= 0 or random.random() < 0.45)
+        used = spot["used_reply"] if do_reply else spot["used_repost"]      # each account: one reply and one repost
+        exclude = set(self.busy_accounts) | used | self._exposed()
+        row = self.pick_account(exclude=exclude, rest_seconds=120)
         if row is None or row["account_id"] in exclude:
             return None
-        spot["used"].add(row["account_id"])
-        do_reply = spot["replies_left"] > 0 and (spot["reposts_left"] <= 0 or random.random() < 0.4)
+        used.add(row["account_id"])
         if do_reply:
             spot["replies_left"] -= 1
             target = {"post_id": spot["post_id"], "root_post_id": spot["root"], "body": spot["body"],
