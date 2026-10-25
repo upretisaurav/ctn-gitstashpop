@@ -4,8 +4,8 @@
   "share_top_level": 0.45,
   "extra_mentions_per_reply": 2,
   "mentions_per_post": 4,
-  "boost_likes_per_post": 4,
-  "like_reply_targets": 0.6,
+  "boost_likes_per_post": 2,
+  "like_reply_targets": 0.4,
   "follow_engaged": 0.5,
   "gif_rate": 0.2,
   "hashtag_rate": 0.4,
@@ -36,9 +36,10 @@
     "Mandate now"
   ],
   "lock": [
+    "boost_likes_per_post",
     "min_report_confidence",
-    "smart_all_writing",
     "share_top_level",
+    "smart_all_writing",
     "stance_weights"
   ],
   "smart_all_writing": 1.0

@@ -221,3 +221,16 @@ limit 150 -> 400 per 10-min run (~40 reads/min of the 250/min read budget); logs
 Expect by next run: "never checked" backlog falls to ~0 within ~2 h; several "hidden sweep:" hits + retirements early,
 then suspensions grow < 1/h (was ~2/h). If backlog stays large, raise limit or drop the window to 24 h. If sweeps find
 nothing yet suspensions continue, hidden posts may still return 200 from get_post: check the payload fields.
+
+## 2026-10-25 15:40 Adelaide (Sun 05:10 UTC): less coordinated self-liking (manual, with Saurav)
+Saw: score 27,840 (22nd). Last ~5 h +2,054 (~410/h); top-10 teams did ~700-1,400/h in the same window (Operation Swan
++6.9k, i wanna go to china +5.9k, Vertex +4.1k). Portal: 75 registered, 25 banned (+9 since 10:15). Every ban is an
+account report after a moderator-hidden post; our accounts are all far past 100 actions (TheRealMateoSilva 779) mostly
+because of likes, so any hidden post means a ban, and the sweep cannot outrun the reporting team. Bans cost no points
+directly, but each one throws away that account's followers, and the scoring guide says Home feed favours followed
+accounts, so bans shrink our reach.
+Self-likes: boost_likes 4 per standalone post + 0.6 target likes = ~8 likes/h per account, all on our own team's posts
+from the same ~40 new accounts: a clear coordination signal for other teams' reporters.
+Changed: boost_likes_per_post 4 -> 2 (locked), like_reply_targets 0.6 -> 0.4.
+Expect: fewer "has been suspended" messages per hour on the portal (was ~2/h); NPC likes per post unchanged (self-likes
+never scored). If standalone posts' NPC likes/replies drop >25% (less Trending lift), go back to 3.
