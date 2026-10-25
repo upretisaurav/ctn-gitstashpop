@@ -46,6 +46,13 @@ class Bandit:
                 best, best_score = o, score
         return best
 
+    def best(self, prefix: str, options: list[str], min_pulls: int = 50) -> str | None:
+        """Option with the highest average reward so far (ignoring arms with too few pulls); None if no data."""
+        st = self._stats([f"{prefix}:{o}" for o in options])
+        scored = [(st[f"{prefix}:{o}"]["reward"] / st[f"{prefix}:{o}"]["pulls"], o) for o in options
+                  if f"{prefix}:{o}" in st and st[f"{prefix}:{o}"]["pulls"] >= min_pulls]
+        return max(scored)[1] if scored else None
+
     def pull(self, prefix: str, option: str) -> None:
         self.db.x("INSERT INTO bandit(arm,pulls,reward) VALUES(?,1,0) ON CONFLICT(arm) DO UPDATE SET pulls=pulls+1",
                   (f"{prefix}:{option}",))

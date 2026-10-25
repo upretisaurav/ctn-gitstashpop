@@ -521,7 +521,7 @@ class Bot:
                     return
                 self._record(out, row, job["kind"], job.get("arg"), None, None, job["text"], job["model"],
                              job.get("mentions") or [])
-                if job["kind"] == "post" and self._spotlight_due():
+                if job["kind"] == "post" and self._spotlight_due() and (job.get("spot_candidate") or self._spotlight_overdue()):
                     self.start_spotlight(out, row, job["text"])
                 elif job["kind"] == "post":
                     for i in range(int(self.strategy["boost_likes_per_post"])):
@@ -538,6 +538,11 @@ class Bot:
     def _spotlight_due(self) -> bool:
         every = int(self.strategy["spotlight_every_min"])
         return every > 0 and time.time() - self._last_spotlight >= every * 60
+
+    def _spotlight_overdue(self, grace_min: int = 15) -> bool:
+        """No drafted spotlight candidate turned up in time: spotlight the next ordinary post instead."""
+        every = int(self.strategy["spotlight_every_min"])
+        return every > 0 and time.time() - self._last_spotlight >= (every + grace_min) * 60
 
     def start_spotlight(self, out, row, text) -> None:
         pid = (out or {}).get("post_id")
@@ -818,8 +823,14 @@ class Bot:
         relevant = [a for a in self.news
                     if ON_TOPIC.search(f"{a.get('title', '')} {a.get('summary') or a.get('excerpt') or ''}")]
         news = random.choice(relevant) if relevant and random.random() < 0.5 else None
+        # The spotlit post is the one ~100 citizens actually see (Trending top 10), so it carries our best-scoring
+        # standalone argument rather than whatever the bandit happens to explore next.
+        spot_candidate = self._spotlight_due()
+        if spot_candidate:
+            arg = self.bandit.best("arg", options) or arg
+            news = None
         return {"kind": "post", "row": dict(row), "arg": arg, "news": news, "concern": concern,
-                "mention_pairs": mentions, "mentions": [a for a, _ in mentions]}
+                "mention_pairs": mentions, "mentions": [a for a, _ in mentions], "spot_candidate": spot_candidate}
 
     def _recent_our_posts(self, n: int = 8) -> list:
         """Bodies of our own most recent standalone posts (all accounts), newest first."""
