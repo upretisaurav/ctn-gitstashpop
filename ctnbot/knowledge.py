@@ -102,8 +102,12 @@ ARGUMENTS = {
         "for": ["supply_access", "two_tier", "jobs_income", "outer_islands", "kids_school", "enforcement_burden"],
     },
     "no_locks_out": {
-        "gist": "A No doesn't pause the question, it removes the option for the life of this Assembly, even if H2D2 "
-                "arrives. A Yes keeps a tool the government can only phase in when it's needed.",
+        "gist": "Be exact (citizens check the ballot wording): after a No, no access rule can come in before the "
+                "2027 election unless the country holds a whole new referendum first, even if H2D2 is spreading. "
+                "Name that second-referendum route yourself, then say why it's too slow: weeks of campaigning and "
+                "a national vote in the middle of an outbreak. A Yes switches nothing on today; it only lets the "
+                "government phase it in once everyone has had a fair chance at the free jab. Never claim a No "
+                "makes it impossible or 'locks it away' full stop.",
         "for": ["evidence", "sunset", "venue_list", "choice_freedom"],
     },
     "hospital_capacity": {
