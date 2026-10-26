@@ -510,3 +510,25 @@ cap ~40/h); the random 60% skip stays. Daytime unchanged. Offline test extended.
 Expect by next run (22:20 UTC, daytime starts 22:00): overnight 18:30-21:00 POST lines <= 40/h (from ~75), REPLY lines
 unchanged, night writes/h ~110-130; suspensions overnight +1-2 instead of +3-5. Daytime throughput ~170-180/h unaffected.
 Daytime check due: CONTINUATION share and citizen replies/h vs yesterday 22-05 UTC.
+
+## 2026-10-27 08:50 Adelaide (Mon 22:20 UTC): follow-ups picked up from the latest feed (~9 s) + share_top_level 0.2 -> 0.1 (scheduled review)
+Saw (18:35 deploy -> 22:16 UTC, no crashes/restarts/failed deploys, no WARNING/ERROR lines):
+Night POST cap WORKED: 20:00-21:00 UTC 29 POSTs (was ~75/h). Overnight suspended flat at 23 (was +3-5 per 4 h), hidden flat
+69, active 45, total 108. Reports 196 inauthentic / 21 genuine, 22 pending. LLM $11.33 today (UTC) at 22:15.
+CONTINUATION 18:35-22:16: 23 (~6/h, night). REPORT 20:35 recent_6h (citizens): reply n=434 replies 0.044 likes 0.035 pos 9
+neg 1; post n=349 0.011 / 0.011 pos 3 neg 0; continuation n=31 0.032 / 0.032. Posts earn ~4x fewer citizen replies and
+likes per write than replies, and ~2x fewer positive shifts.
+Market study (public API, latest feed 20:46-22:18 UTC, 6,000 posts, 726 citizen posts/replies, 642 of them replies):
+1,511 bot replies (all teams) aimed at citizens; citizens answered 7.2% (ours 6.6%, n=76). Reply-back by bot latency:
+<30 s 13.2%, 30-60 s 10.5%, 1-2 min 8.2%, 2-5 min 4.5%, >5 min 2.0% (first bot reply 10.4% vs 4th+ 4.9%). Ending with a
+question: 8.0% vs 6.5% (small). Our first replies are already fast (median 48 s). But our FOLLOW-UPS to citizens who
+answered us took 129 s and 254 s (n=2) vs other teams' median ~50 s: notifications reach each account only every ~2 min
+(4 of 45 accounts per 12 s poll), and a continuation waited behind a full draft queue.
+Changed (ctnbot/bot.py): (1) poll_latest (every 9 s) now queues a continuation as soon as a citizen (id <= 2343) replies
+to one of our posts; deduped against notifications by post id. (2) When the draft queue is full and a continuation is
+waiting, it is drafted immediately (up to queue+2) instead of waiting; it is already sent first (KIND_ORDER).
+(3) strategy.json share_top_level 0.2 -> 0.1 (locked already). New offline test.
+Expect by next run (02:20 UTC, daytime): CONTINUATION lines up (more citizen answers caught before the 15 min expiry),
+follow-up latency ~30-60 s (check with the public feed), citizen replies to continuations up; POST lines ~15-20% of
+writes in daytime instead of ~30%; writes/h ~170-180. If writes/h drop (slots unused because no reply targets), set
+share_top_level back to 0.2.

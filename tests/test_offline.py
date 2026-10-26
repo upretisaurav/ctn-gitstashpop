@@ -279,6 +279,24 @@ def test_follow_ups_with_everyone_until_two_pushbacks():
         bot._last_night_post = 0.0
 
 
+def test_citizen_answers_from_latest_feed_queue_follow_ups_once():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        bot.create_account()
+        row = bot.db.our_accounts("active")[0]
+        bot.db.x("INSERT INTO our_posts(post_id, account_id, kind) VALUES(?,?,?)", (9001, row["account_id"], "reply"))
+        feed = [{"post_id": 9100, "author_id": 500, "kind": "reply", "body": "hmm maybe", "reply_to_post_id": 9001},
+                {"post_id": 9101, "author_id": 50000, "kind": "reply", "body": "rival bot", "reply_to_post_id": 9001},
+                {"post_id": 9102, "author_id": 501, "kind": "reply", "body": "not to us", "reply_to_post_id": 1}]
+        bot._queue_feed_continuations(feed)
+        assert list(bot.continuations) == ["f9100"]                   # citizens answering us only
+        assert bot.continuations["f9100"]["account_id"] == row["account_id"]
+        bot._queue_feed_continuations(feed)
+        assert len(bot.continuations) == 1                            # no duplicate from the next poll
+        job = bot.plan_continuation()
+        assert job is not None and job["target_post_id"] == 9100
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):

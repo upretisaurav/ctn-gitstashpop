@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Optional
 
 from .blue import BlueTeam
-from .classify import NPC_ID_CUTOFF, Classifier
+from .classify import NPC_ID_CUTOFF, Classifier, _author_of as _author_id
 from .config import Config
 from .db import DB
 from .knowledge import ARGUMENTS, CONCERNS, PERSONA_BY_KEY, PERSONAS, make_password, make_username
@@ -88,7 +88,8 @@ class Bot:
         if self.db.get("classifier_version", 1) < 2:      # re-score everyone after the blend change
             self.db.x("UPDATE accounts SET classified_at=0 WHERE account_id > ?", (NPC_ID_CUTOFF,))
             self.db.put("classifier_version", 2)
-        self.continuations: dict[int, dict] = {}       # notification_id -> item
+        self.continuations: dict = {}                  # notification_id (or "f<post_id>" from the feed) -> item
+        self._cont_posts: dict = {}                    # citizen reply post_id -> when queued (dedupe feed vs notifications)
         self.delayed: list = []                          # heap of (when, seq, fn, args)
         self._seq = 0
         self.news: list = []
@@ -261,7 +262,32 @@ class Bot:
 
     # ======================================================================  reading
     def poll_latest(self) -> None:
-        self.cls.ingest(self.p.feed("latest", 50))
+        new = self.cls.ingest(self.p.feed("latest", 50))
+        self._queue_feed_continuations(new)
+
+    # Speed of the follow-up decides whether the citizen answers again. Live sample (26 Oct 20:46-22:00 UTC, 1,511 bot
+    # replies to citizens, all teams): citizens answered 13% of replies sent within 30 s, 8% at 1-2 min, 4.5% at
+    # 2-5 min and 2% after 5 min. Notifications reach us per account only every ~2 min (4 of ~45 accounts every
+    # 12 s), so our follow-ups went out 2-4 min after the citizen answered while other teams' median was ~50 s.
+    # The latest feed is polled every 9 s, so pick up citizen answers to our posts from it directly.
+    def _queue_feed_continuations(self, posts) -> None:
+        now = time.time()
+        for p in posts or []:
+            parent = p.get("reply_to_post_id")
+            actor = _author_id(p)
+            if not parent or actor is None or actor > NPC_ID_CUTOFF or actor in self.cls.our_ids:
+                continue
+            if p["post_id"] in self._cont_posts:
+                continue
+            ours = self.db.one("SELECT account_id FROM our_posts WHERE post_id=?", (parent,))
+            if not ours:
+                continue
+            self._cont_posts[p["post_id"]] = now
+            self.continuations[f"f{p['post_id']}"] = {
+                "account_id": ours["account_id"], "actor": actor, "post": dict(p, author_id=actor), "at": now}
+        if len(self._cont_posts) > 5000:
+            cutoff = now - 3600
+            self._cont_posts = {k: v for k, v in self._cont_posts.items() if v > cutoff}
 
     def poll_trending(self) -> None:
         posts = self.p.feed("trending", 50)
@@ -310,6 +336,11 @@ class Bot:
                 actor = (n.get("actor") or {}).get("account_id") or (n.get("post") or {}).get("author_id")
                 if actor is None or actor in self.cls.our_ids:
                     continue
+                pid = (n.get("post") or {}).get("post_id")
+                if pid in self._cont_posts:
+                    continue                              # already picked up from the latest feed
+                if pid is not None:
+                    self._cont_posts[pid] = time.time()
                 self.continuations[n["notification_id"]] = {
                     "account_id": row["account_id"], "actor": actor, "post": n["post"], "at": time.time()}
             self.p.resolve_notifications(row, max(n["notification_id"] for n in notes))
@@ -470,7 +501,18 @@ class Bot:
             return
         if self.ready and self.limits.write.available():
             self._send_next()
-        if (len(self.inflight) + len(self.ready) < self.cfg.draft_queue
+        queued = len(self.inflight) + len(self.ready)
+        if (queued >= self.cfg.draft_queue and queued < self.cfg.draft_queue + 2 and self.continuations
+                and not any(j.get("kind") == "continuation" for _, j in self.inflight)):
+            # a citizen just answered us: draft the follow-up now instead of waiting behind the queue (it is sent
+            # first anyway, see KIND_ORDER); every 30 s of delay costs reply-backs
+            job = self.plan_continuation()
+            if job is not None:
+                self._reserve(job)
+                job["planned_at"] = time.time()
+                self.inflight.append((self.drafter.submit(self._compose_safe, job), job))
+                return
+        if (queued < self.cfg.draft_queue
                 and time.time() >= self.plan_backoff_until):
             job = self._plan()
             if job is None:
