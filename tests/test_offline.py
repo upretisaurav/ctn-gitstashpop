@@ -98,7 +98,8 @@ def test_strategist_respects_bounds_and_locks():
         from ctnbot.strategy import REPO_FILE
         repo_conf = json.loads(REPO_FILE.read_text())["min_report_confidence"]
         assert bot.strategy["min_report_confidence"] == repo_conf     # locked in strategy.json
-        assert "Keep it short." in bot.writer.system
+        assert "Keep it short." not in bot.writer.system          # style_notes are locked in strategy.json
+        assert "200-320 characters" in bot.writer.system
 
 
 def test_full_loop_in_simulator():
@@ -232,6 +233,29 @@ def test_tracker_counts_only_citizens_and_skips_stale_bandit_delta():
         after = bot.db.one("SELECT reward FROM bandit WHERE arm='arg:personal_story'")
         # fresh post: +0.3 for one citizen like; stale post: no (spurious negative) delta
         assert abs((after["reward"] if after else 0) - (before["reward"] if before else 0) - 0.3) < 1e-9
+
+
+def test_follow_ups_with_everyone_until_two_pushbacks():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        bot.create_account()
+        row = bot.db.our_accounts("active")[0]
+        # a No-leaning citizen (id below the cutoff) answered one of our posts
+        bot.db.x("INSERT OR REPLACE INTO accounts(account_id, npc_score, stance, first_seen) VALUES(?,?,?,?)", (500, 0.99, -1, 1.0))
+        item = {"account_id": row["account_id"], "actor": 500, "at": time.time(),
+                "post": {"post_id": 1, "author_id": 500, "body": "Still not convinced.", "reply_to_post_id": None}}
+        bot.continuations[1] = item
+        job = bot.plan_continuation()
+        assert job is not None and job["kind"] == "continuation"      # stance no longer gates follow-ups
+        bot._pushbacks[500] = bot.CONTINUE_MAX_PUSHBACK
+        bot.continuations[2] = dict(item)
+        assert bot.plan_continuation() is None                        # but two strong pushbacks end the thread
+        # night mode: fewer standalone posts, spotlight never due
+        assert isinstance(bot.is_night(), bool)
+        bot.strategy._data["spotlight_every_min"] = 1
+        bot._last_spotlight = 0
+        if bot.is_night():
+            assert not bot._spotlight_due()
 
 
 if __name__ == "__main__":

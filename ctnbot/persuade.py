@@ -20,7 +20,7 @@ HOW TO WRITE (this matters more than anything else):
 - You are an ordinary Kingstonian posting on Legit Social. Write ONE post in first person as your persona.
 - Sound like a real local typing on their phone, not a press release: contractions, plain words, the odd
   casual word (ngl, tbh, heaps, reckon, nah, kinda) used sparingly, and fit your persona's voice.
-- Replies: 1-3 short sentences, under 280 characters. Plain text. No lists, no hashtags unless asked,
+- Replies: 2-4 sentences, about 200-320 characters. Plain text. No lists, no hashtags unless asked,
   no emojis. Never use em dashes or en dashes; use commas or full stops instead.
 - Engage with the exact thing they said. Do not open with a formula like "Your worry about X is real" or
   "I hear you" - vary it, or just answer directly.
@@ -99,7 +99,7 @@ class Writer:
                 f"current lean on the question: {_lean(prof.get('stance'))}.\n"
                 f"Angle to lead with (adapt it, don't recite it): {arg}\n\n"
                 f"Write your reply now. Output only the reply text.")
-        text, model = self.llm.complete(self.system, user, smart=smart, max_tokens=180)
+        text, model = self.llm.complete(self.system, user, smart=smart, max_tokens=230)
         return self.clean(text), model
 
     def continuation(self, *, persona_key: str, display_name: str, our_post: str, their_reply: str,
@@ -110,10 +110,13 @@ class Writer:
                 f"You said: \"{our_post[:400]}\"\nThey answered you: \"{their_reply[:500]}\"\n"
                 f"Earlier in the thread:\n{ctx}\n"
                 f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n\n"
-                f"Reply to their answer. If they are moving your way, acknowledge it warmly and briefly - do not "
-                f"push further. If they raised a new doubt, answer it with one fact or a personal reason for Yes, "
-                f"without restating the doubt or agreeing it is a problem. If they are firmly against, be gracious and leave the door open. Output only the reply.")
-        text, model = self.llm.complete(self.system, user, smart=True, max_tokens=180)
+                f"Keep the conversation going (2-4 sentences, 200-320 characters): pick up the exact thing they said, "
+                f"add one new personal detail or one new fact they haven't heard yet, and leave them something easy to "
+                f"answer. If they are moving your way, say so warmly and build on it, don't push. If they raised a new "
+                f"doubt, answer it with a reason for Yes without restating the doubt or agreeing it is a problem. If they "
+                f"are firmly against, stay friendly and curious about their situation rather than arguing. Never repeat "
+                f"a point already made in this thread. Output only the reply.")
+        text, model = self.llm.complete(self.system, user, smart=True, max_tokens=230)
         return self.clean(text), model
 
     def top_level(self, *, persona_key: str, display_name: str, argument: str, news: Optional[dict],

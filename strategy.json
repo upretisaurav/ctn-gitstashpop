@@ -1,7 +1,7 @@
 {
   "_comment": "Baseline strategy. Edit + push to main and Render redeploys. The in-bot strategist adjusts these within bounds every ~4h unless a key is listed in lock. See ctnbot/strategy.py for the allowed keys and ranges.",
   "target_active_accounts": 40,
-  "share_top_level": 0.35,
+  "share_top_level": 0.2,
   "extra_mentions_per_reply": 2,
   "mentions_per_post": 4,
   "boost_likes_per_post": 2,
@@ -28,7 +28,9 @@
     "Vary how you open: don't start with 'Fair', 'Fair point' or 'Fair enough' (most of our replies already do, which reads as scripted)",
     "Only mention the unpublished venue list or end date if the person raised it themselves",
     "Never volunteer the No side's talking points (venue list, end date, sunset) in a reply unless the person raised them",
-    "Don't lean on the same stock facts every post (30 ICU beds, 40 nursing posts, nurse clinic and a helicopter); use a different detail or a personal moment instead"
+    "Don't lean on the same stock facts every post (30 ICU beds, 40 nursing posts, nurse clinic and a helicopter); use a different detail or a personal moment instead",
+    "Replies and follow-ups: 2-4 sentences, 200-320 characters, with one concrete personal detail; short one-liners read as dismissive",
+    "In a follow-up, never repeat a point already made in the thread; bring something new"
   ],
   "avoid_phrases": [
     "Your worry about",
@@ -47,7 +49,8 @@
     "spotlight_likes",
     "spotlight_replies",
     "spotlight_reposts",
-    "stance_weights"
+    "stance_weights",
+    "style_notes"
   ],
   "smart_all_writing": 1.0,
   "spotlight_every_min": 0,

@@ -451,3 +451,28 @@ Expect by next run: writes/h unchanged (~175) but no SPOTLIGHT start lines; REPL
 recent_6h ~450+; citizen pos shifts per 6 h up (reply pos 18 -> ~25+), neg flat; hidden posts flat or lower.
 If reply neg rises above pos/3 at the higher volume, or citizen replies run out (planner falling back to posts a lot),
 set share_top_level back to 0.45. Spotlight stays off unless a rival-free Trending slot appears.
+
+## 2026-10-26 23:40 Adelaide (Mon 13:10 UTC): TALK, DON'T BROADCAST (manual, after the afternoon research with Saurav)
+Research (public API, 26 Oct 04:30-05:30 UTC): in 20 min citizens wrote 181 replies and only 13 posts; 161 of the 181
+(89%) answered a bot reply addressed to that citizen, mostly 4-8 messages deep. We earned 1 of them. The accounts that
+earn the most citizen replies (up to 8 per 20 min from one account) write 100% replies, 60-85% inside threads the
+citizen started, 210-360 chars each, and follow up every time; their reply-back rate is 8-18%. Our last 100 scored
+writes had 2 citizen replies. Top Trending posts (45 reposts + 40 replies in 40 min, likely two allied teams) still get
+only 9-11 citizen likes and 0-1 citizen replies. Citizens post 5-7x more in AU daytime (UTC 22-05) than at night
+(UTC 15-17). Our writes (6 h): 37% posts, 22% boosting, 34% replies, 2.4% follow-ups.
+Changed:
+1. Follow-ups with everyone (bot.py): stance gate removed, moved_until ignored for follow-ups; a thread ends only
+   after two strong pushbacks (judge shift <= -0.7) from the same citizen. Continuation prompt: 2-4 sentences,
+   200-320 chars, one new detail, something easy to answer, never repeat a point.
+2. Reply targeting: candidates in citizen-started threads get full weight at any depth; citizens talking inside
+   another bot's thread are weighted 0.6-0.1*depth. Replies 2-4 sentences / 200-320 chars (STYLE_RULES, max_tokens 230).
+3. share_top_level 0.35 -> 0.2; when no fresh citizen exists, reply to citizen posts up to 30 min old before falling
+   back to a standalone post.
+4. Night mode (UTC 13-21 = 23:30-07:30 Adelaide): standalone share x0.3, 60% of empty slots skipped (saves
+   accounts), spotlight never due at night (it is off anyway: spotlight_every_min 0).
+5. style_notes locked (the in-bot strategist kept adding "keep it under 160 chars" / "end with a question", which
+   the miner data contradicts: long posts 15.0 vs 6.0, questions 7.7 vs 16.7).
+Expect by the next reviews: CONTINUATION lines a large share of writes (target 25-40%), citizen replies/h up from
+~20 to 40+, "citizens: N replies" lines > 0 far more often, portal hourly red up; bans/h down at night.
+If citizen replies/h do NOT rise within 8 h, check the notification path (poll_notifications) first: continuations
+only exist when citizen replies reach us as notifications.

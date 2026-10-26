@@ -114,6 +114,7 @@ class Bot:
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
         self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
         self._privacy_done: set = set(self.db.get("private_accounts", []) or [])
+        self._pushbacks: dict = {}
         if not self.db.get("unretired_v1"):          # retired-but-not-banned accounts are free capacity
             n = self.db.x("UPDATE our_accounts SET status='active' WHERE status='retired'").rowcount
             self.db.put("unretired_v1", True)
@@ -447,8 +448,12 @@ class Bot:
     # moment a write slot opens. Before this, every write waited ~25 s on the LLM, so we used ~2 of the
     # 3 writes a minute the team is allowed.
     KIND_ORDER = {"continuation": 0, "boost_reply": 1, "boost_repost": 1, "reply": 2, "post": 3, "life": 4}
-    CONTINUE_MIN_SHIFT = -0.4      # skip a continuation when their answer to us reads at or below this
-    CONTINUE_MIN_STANCE = 1        # only continue with citizens already leaning Yes (stance <=0 scored 3 up / 14 down)
+    # Conversations are where citizen points come from: in a live sample, 161 of 181 citizen replies (89%) answered a
+    # bot reply addressed to that citizen, mostly 4-8 messages deep, and the accounts earning the most citizen replies
+    # write nothing but follow-ups. So we follow up with everyone; we only stop after two strong pushbacks in a row.
+    CONTINUE_MIN_SHIFT = -0.7      # a strong pushback
+    CONTINUE_MAX_PUSHBACK = 2      # stop the thread after this many strong pushbacks from the same citizen
+    NIGHT_UTC = range(13, 21)      # 23:30-07:30 Adelaide: citizens post 5-7x less; save accounts, keep replying
 
     def write_slot(self) -> None:
         self._harvest_drafts()
@@ -468,12 +473,26 @@ class Bot:
             job["planned_at"] = time.time()
             self.inflight.append((self.drafter.submit(self._compose_safe, job), job))
 
+    def is_night(self) -> bool:
+        return time.gmtime().tm_hour in self.NIGHT_UTC
+
     def _plan(self):
-        return (self.plan_continuation()
-                or self.plan_boost()
-                or (random.random() < self.strategy["share_top_level"] and self.plan_top_level())
-                or self.plan_reply()
-                or self.plan_top_level())
+        night = self.is_night()
+        share = float(self.strategy["share_top_level"]) * (0.3 if night else 1.0)
+        job = (self.plan_continuation()
+               or self.plan_boost()
+               or (random.random() < share and self.plan_top_level())
+               or self.plan_reply())
+        if job:
+            return job
+        # Nobody fresh to talk to. Citizens read their notifications next session, so a reply to a post up to
+        # 30 min old still lands; a standalone post at night mostly earns reports.
+        job = self.plan_reply(fresh_seconds=1800)
+        if job:
+            return job
+        if night and random.random() < 0.6:
+            return None
+        return self.plan_top_level()
 
     def _reserve(self, job) -> None:
         self.busy_accounts.add(job["row"]["account_id"])
@@ -568,7 +587,7 @@ class Bot:
     # 30/min budget; reposts and replies come out of the 3 writes/min, so we spotlight one post every ~20 minutes.
     def _spotlight_due(self) -> bool:
         every = int(self.strategy["spotlight_every_min"])
-        return every > 0 and time.time() - self._last_spotlight >= every * 60
+        return every > 0 and not self.is_night() and time.time() - self._last_spotlight >= every * 60
 
     def _spotlight_overdue(self, grace_min: int = 15) -> bool:
         """No drafted spotlight candidate turned up in time: spotlight the next ordinary post instead."""
@@ -704,9 +723,8 @@ class Bot:
                               (item["account_id"],))
             if not row:
                 continue
-            prof = self._profile(item["actor"])
-            if prof is not None and prof["stance"] is not None and prof["stance"] < self.CONTINUE_MIN_STANCE:
-                continue                                  # undecided/No: a second message mostly moves them away
+            if self._pushbacks.get(item["actor"], 0) >= self.CONTINUE_MAX_PUSHBACK:
+                continue                                  # they've pushed back hard twice; leave it there
             job = {"kind": "continuation", "row": dict(row), "item": item, "target_author": item["actor"],
                    "target_post_id": (item.get("post") or {}).get("post_id")}
             break
@@ -721,8 +739,6 @@ class Bot:
         if actor > NPC_ID_CUTOFF and random.random() >= float(self.strategy["noncitizen_target_weight"]):
             return None          # not a citizen: a continuation scores nothing, spend the slot on someone who counts
         prof = self._profile(actor)
-        if prof and (prof["moved_until"] or 0) > time.time():
-            return None
         their = item["post"]
         try:
             full = self.p.read("get_post", their["post_id"])
@@ -737,9 +753,13 @@ class Bot:
         # leave pushback alone, rest them from targeting for a while, and spend the write slot on someone new.
         shift, _ = self.writer.judge_shift(ours["body"] if ours else "", full.get("body") or "")
         if shift <= self.CONTINUE_MIN_SHIFT:
-            self.db.x("UPDATE accounts SET last_targeted=? WHERE account_id=?", (time.time(), actor))
-            log.info("skip continuation with %s: pushing back (shift %.2f)", actor, shift)
-            return None
+            self._pushbacks[actor] = self._pushbacks.get(actor, 0) + 1
+            if self._pushbacks[actor] >= self.CONTINUE_MAX_PUSHBACK:
+                self.db.x("UPDATE accounts SET last_targeted=? WHERE account_id=?", (time.time(), actor))
+                log.info("ending thread with %s: pushed back hard %d times (shift %.2f)", actor, self._pushbacks[actor], shift)
+                return None
+        elif shift > 0:
+            self._pushbacks.pop(actor, None)
         text, model = self.writer.continuation(
             persona_key=row["persona_key"], display_name=row["display_name"],
             our_post=(ours["body"] if ours else ""), their_reply=full.get("body") or "",
@@ -750,8 +770,9 @@ class Bot:
         return job
 
     # ---- 2. replies to fresh NPC posts -------------------------------------
-    def plan_reply(self):
+    def plan_reply(self, fresh_seconds: Optional[int] = None):
         now = time.time()
+        fresh_seconds = int(fresh_seconds or self.strategy["reply_fresh_seconds"])
         rows = self.db.all("""
             SELECT p.post_id, p.author_id, p.kind, p.body, p.reply_to, p.root_id, p.created_at, p.depth,
                    a.npc_score, a.stance, a.stance_vacc, a.stance_yearly, a.concerns, a.identity, a.persuadable,
@@ -763,13 +784,27 @@ class Bot:
               AND p.author_id NOT IN (SELECT account_id FROM our_accounts)
               AND p.post_id NOT IN (SELECT COALESCE(target_post,0) FROM our_posts)
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 80""",
-                           (now - int(self.strategy["reply_fresh_seconds"]), now, now - self.cfg.target_cooldown_minutes * 60,
+                           (now - fresh_seconds, now, now - self.cfg.target_cooldown_minutes * 60,
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
                 and r["author_id"] not in self.busy_people]
         if not rows:
             return None
-        score, r = max(((self._target_score(r, now), r) for r in rows), key=lambda t: t[0])
+        # Who started each thread? The accounts that earn the most citizen replies mostly reply inside threads the
+        # citizen started (their own post, or their replies within it); a citizen talking to another bot is a
+        # worse bet. Top-level citizen posts have no root.
+        roots = {r["root_id"] for r in rows if r["root_id"]}
+        root_author = {}
+        if roots:
+            q = ",".join("?" * len(roots))
+            root_author = {x["post_id"]: x["author_id"] for x in
+                           self.db.all(f"SELECT post_id, author_id FROM posts WHERE post_id IN ({q})", tuple(roots))}
+        def cit_rooted(r):
+            if not r["root_id"] or r["root_id"] == r["post_id"]:
+                return True
+            ra = root_author.get(r["root_id"])
+            return ra is not None and ra <= NPC_ID_CUTOFF
+        score, r = max(((self._target_score(r, now, cit_rooted(r)), r) for r in rows), key=lambda t: t[0])
         if score <= 0.05:
             return None
         concerns = json.loads(r["concerns"] or "[]") or ["other"]
@@ -808,7 +843,7 @@ class Bot:
         job.update(text=text, model=model, mentions=[a for a, _ in extra])
         return job
 
-    def _target_score(self, r, now: float) -> float:
+    def _target_score(self, r, now: float, citizen_rooted: bool = True) -> float:
         sw = self.strategy["stance_weights"]
         stance_w = float(sw.get(str(r["stance"]), 0.7)) if r["stance"] is not None else 0.7
         concerns = json.loads(r["concerns"] or "[]")
@@ -817,7 +852,8 @@ class Bot:
             stance_w = 0.5            # yearly/general vaccination views also pay 160
         age = max(0.0, now - (r["created_at"] or now))
         fresh = math.exp(-age / 150.0)
-        depth_w = 1.0 if (r["depth"] in (0, None)) else max(0.3, 1 - 0.1 * r["depth"])
+        # Citizens keep talking 4-8 deep in their own threads, so depth only counts against us in someone else's.
+        depth_w = 1.0 if citizen_rooted else max(0.3, 0.6 - 0.1 * (r["depth"] or 0))
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
         on_topic = 1.0 if ON_TOPIC.search(r["body"] or "") else 0.15     # don't hijack footy posts
         # Only citizens score, and every citizen was created before the game opened (id <= NPC_ID_CUTOFF). ~94% of
