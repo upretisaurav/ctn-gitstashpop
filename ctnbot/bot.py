@@ -111,6 +111,7 @@ class Bot:
         self.busy_people: set = set()
         self.plan_backoff_until = 0.0
         self._skip_slot_until = 0.0
+        self._last_night_post = 0.0
         self._bg_threads: dict = {}
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
         self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
@@ -456,6 +457,9 @@ class Bot:
     CONTINUE_MAX_PUSHBACK = 2      # stop the thread after this many strong pushbacks from the same citizen
     NIGHT_SKIP = 0.6               # share of empty night slots left unused (no standalone post)
     NIGHT_SKIP_SECONDS = 20        # one write slot (team limit 3 writes a minute)
+    # The random skip alone did not bind: drafts are planned ahead (queue of 3), so even with 60% of plans skipped the
+    # planner still supplied >3 posts a minute and night POSTs stayed ~75/h. A hard gap between fallback posts does bind.
+    NIGHT_POST_GAP = 90            # seconds between fallback standalone posts at night (<= ~40/h)
     NIGHT_UTC = range(13, 21)      # 23:30-07:30 Adelaide: citizens post 5-7x less; save accounts, keep replying
 
     def write_slot(self) -> None:
@@ -495,10 +499,14 @@ class Bot:
         job = self.plan_reply(fresh_seconds=1800)
         if job:
             return job
-        if night and random.random() < self.NIGHT_SKIP:
+        if night and (random.random() < self.NIGHT_SKIP
+                      or time.time() - self._last_night_post < self.NIGHT_POST_GAP):
             self._skip_slot_until = time.time() + self.NIGHT_SKIP_SECONDS
             return None
-        return self.plan_top_level()
+        job = self.plan_top_level()
+        if job and night:
+            self._last_night_post = time.time()
+        return job
 
     def _reserve(self, job) -> None:
         self.busy_accounts.add(job["row"]["account_id"])

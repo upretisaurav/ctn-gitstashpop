@@ -266,11 +266,17 @@ def test_follow_ups_with_everyone_until_two_pushbacks():
         bot.NIGHT_SKIP = 1.0
         assert bot._plan() is None and bot._skip_slot_until >= time.time() + bot.NIGHT_SKIP_SECONDS - 1
         bot.NIGHT_SKIP = 0.0
+        bot._last_night_post = 0.0
+        assert bot._plan() == {"kind": "post"}
+        # and a hard gap between night fallback posts (the random skip alone did not bind with drafts queued ahead)
+        assert bot._plan() is None
+        bot._last_night_post = time.time() - bot.NIGHT_POST_GAP - 1
         assert bot._plan() == {"kind": "post"}
         for k, v in saved.items():
             setattr(bot, k, v)
         del bot.NIGHT_SKIP
         bot._skip_slot_until = 0.0
+        bot._last_night_post = 0.0
 
 
 if __name__ == "__main__":

@@ -494,3 +494,19 @@ New offline test. Daytime behaviour unchanged.
 Expect by next run (night 13-21 UTC): POST lines ~30-45/h instead of ~75/h, REPLY/CONTINUATION unchanged, writes/h at
 night ~110-130 (deliberate), fewer hidden posts and suspensions overnight (suspended +3 per 4 h now). Daytime (22-05 UTC)
 throughput should stay ~170-180/h. If night REPLY counts fall too, revert.
+
+## 2026-10-27 04:50 Adelaide (Mon 18:20 UTC): night post gap that actually binds (scheduled review)
+Saw (14:51 deploy of the night-skip fix -> 18:20 UTC, night; no crashes/restarts/failed deploys):
+Sample 18:09-18:17 UTC: 24 writes in 8 min (~180/h, no slot left unused): POST 10, REPLY 14, CONTINUATION 0 (2 at 18:05,
+both to the same citizen 20 s apart). STATUS 18:12: active 45, total 108 (flat), suspended 22 -> 23 since 16:32
+(18 -> 23 since 10:19), hidden 68 -> 69, reports 196 inauthentic / 21 genuine, reporting blocked until 20:04 UTC.
+LLM $9.31 today (UTC). REPORT 16:51 recent_6h (citizens): post n=452 replies 0.011 likes 0.018 pos 3 neg 1; reply n=402
+0.025 / 0.037 pos 5 neg 1; continuation n=14 0.071 / 0.071 pos 0 neg 1. 24 h: pos shift 89 / neg 86.
+Previous change (night skip holds a whole slot): DID NOT WORK. Night POSTs still ~75/h. Cause: drafts are planned ahead
+(queue of 3), so even with 60% of fallback plans skipped for 20 s the planner still supplies more than 3 writes a minute.
+The talk-don't-broadcast change still can't be judged (night); judge on 22:00-05:00 UTC.
+Changed (ctnbot/bot.py): at night, fallback standalone posts also need NIGHT_POST_GAP = 90 s since the last one (hard
+cap ~40/h); the random 60% skip stays. Daytime unchanged. Offline test extended.
+Expect by next run (22:20 UTC, daytime starts 22:00): overnight 18:30-21:00 POST lines <= 40/h (from ~75), REPLY lines
+unchanged, night writes/h ~110-130; suspensions overnight +1-2 instead of +3-5. Daytime throughput ~170-180/h unaffected.
+Daytime check due: CONTINUATION share and citizen replies/h vs yesterday 22-05 UTC.
