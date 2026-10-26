@@ -256,6 +256,21 @@ def test_follow_ups_with_everyone_until_two_pushbacks():
         bot._last_spotlight = 0
         if bot.is_night():
             assert not bot._spotlight_due()
+        # a night skip holds planning for a whole write slot (the 6 s retry used to re-roll it until it posted)
+        saved = {k: getattr(bot, k) for k in ("is_night", "plan_continuation", "plan_boost", "plan_reply",
+                                              "plan_top_level")}
+        bot.is_night = lambda: True
+        bot.plan_continuation = bot.plan_boost = lambda *a, **k: None
+        bot.plan_reply = lambda *a, **k: None
+        bot.plan_top_level = lambda: {"kind": "post"}
+        bot.NIGHT_SKIP = 1.0
+        assert bot._plan() is None and bot._skip_slot_until >= time.time() + bot.NIGHT_SKIP_SECONDS - 1
+        bot.NIGHT_SKIP = 0.0
+        assert bot._plan() == {"kind": "post"}
+        for k, v in saved.items():
+            setattr(bot, k, v)
+        del bot.NIGHT_SKIP
+        bot._skip_slot_until = 0.0
 
 
 if __name__ == "__main__":

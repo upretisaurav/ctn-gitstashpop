@@ -476,3 +476,21 @@ Expect by the next reviews: CONTINUATION lines a large share of writes (target 2
 ~20 to 40+, "citizens: N replies" lines > 0 far more often, portal hourly red up; bans/h down at night.
 If citizen replies/h do NOT rise within 8 h, check the notification path (poll_notifications) first: continuations
 only exist when citizen replies reach us as notifications.
+
+## 2026-10-27 01:00 Adelaide (Mon 14:30 UTC): night skip really skips (bug fix) (scheduled review)
+Saw (13:05 deploy of "talk, don't broadcast" -> 14:30 UTC, night; no crashes/restarts/failed deploys):
+13:30-14:30 UTC writes: REPLY 68, POST 74, LIFE 12, CONTINUATION 4 (13:06-14:30: 4 in total). ~160 writes/h.
+STATUS 14:25: active 47, total 108 (flat), suspended 18 -> 21 since 10:19, hidden 63 -> 68, reports 196 inauthentic /
+21 genuine (90%); a genuine ruling at ~14:04 blocks reporting until 20:04 UTC. LLM $7.29 today (UTC).
+"citizens:" learn lines 14:15-14:32 (~100 checks): 2 citizen replies, 0 likes. REPORT 13:05 recent_6h: post n=430
+avg citizen replies 0.005 / likes 0.012, pos 2 neg 0; reply n=371 0.046 / 0.038, pos 6 neg 1.
+Previous change (talk, don't broadcast, 13:05): too early to judge and it is night (citizens 5-7x quieter); continuations
+are still rare (4 in 85 min) because few citizens are awake to answer. Keep it; judge on the 22:00-05:00 UTC window.
+Bug: night mode was meant to leave 60% of empty slots unused, but a skipped plan only backed off 6 s, so the skip was
+re-rolled ~3 times per 20 s write slot and ~78% of "skipped" slots still posted: at night POSTs (74/h) outnumbered
+REPLYs (68/h), and standalone posts earn ~nothing from citizens while drawing hidden posts and bans.
+Changed (ctnbot/bot.py): a night skip now holds planning for one full write slot (20 s); NIGHT_SKIP = 0.6 unchanged.
+New offline test. Daytime behaviour unchanged.
+Expect by next run (night 13-21 UTC): POST lines ~30-45/h instead of ~75/h, REPLY/CONTINUATION unchanged, writes/h at
+night ~110-130 (deliberate), fewer hidden posts and suspensions overnight (suspended +3 per 4 h now). Daytime (22-05 UTC)
+throughput should stay ~170-180/h. If night REPLY counts fall too, revert.

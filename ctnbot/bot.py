@@ -110,6 +110,7 @@ class Bot:
         self.busy_posts: set = set()
         self.busy_people: set = set()
         self.plan_backoff_until = 0.0
+        self._skip_slot_until = 0.0
         self._bg_threads: dict = {}
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
         self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
@@ -453,6 +454,8 @@ class Bot:
     # write nothing but follow-ups. So we follow up with everyone; we only stop after two strong pushbacks in a row.
     CONTINUE_MIN_SHIFT = -0.7      # a strong pushback
     CONTINUE_MAX_PUSHBACK = 2      # stop the thread after this many strong pushbacks from the same citizen
+    NIGHT_SKIP = 0.6               # share of empty night slots left unused (no standalone post)
+    NIGHT_SKIP_SECONDS = 20        # one write slot (team limit 3 writes a minute)
     NIGHT_UTC = range(13, 21)      # 23:30-07:30 Adelaide: citizens post 5-7x less; save accounts, keep replying
 
     def write_slot(self) -> None:
@@ -467,7 +470,9 @@ class Bot:
                 and time.time() >= self.plan_backoff_until):
             job = self._plan()
             if job is None:
-                self.plan_backoff_until = time.time() + 6     # nothing worth saying right now; don't spin
+                # nothing worth saying right now; don't spin. A night skip holds planning for a whole write slot,
+                # otherwise the 6 s retry re-rolls the skip ~3 times per slot and most "skipped" slots still post.
+                self.plan_backoff_until = max(time.time() + 6, self._skip_slot_until)
                 return
             self._reserve(job)
             job["planned_at"] = time.time()
@@ -490,7 +495,8 @@ class Bot:
         job = self.plan_reply(fresh_seconds=1800)
         if job:
             return job
-        if night and random.random() < 0.6:
+        if night and random.random() < self.NIGHT_SKIP:
+            self._skip_slot_until = time.time() + self.NIGHT_SKIP_SECONDS
             return None
         return self.plan_top_level()
 
