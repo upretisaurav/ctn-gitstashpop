@@ -1,7 +1,7 @@
 {
   "_comment": "Baseline strategy. Edit + push to main and Render redeploys. The in-bot strategist adjusts these within bounds every ~4h unless a key is listed in lock. See ctnbot/strategy.py for the allowed keys and ranges.",
   "target_active_accounts": 40,
-  "share_top_level": 0.45,
+  "share_top_level": 0.35,
   "extra_mentions_per_reply": 2,
   "mentions_per_post": 4,
   "boost_likes_per_post": 2,
@@ -50,7 +50,7 @@
     "stance_weights"
   ],
   "smart_all_writing": 1.0,
-  "spotlight_every_min": 120,
+  "spotlight_every_min": 0,
   "spotlight_likes": 39,
   "spotlight_reposts": 30,
   "spotlight_replies": 24,
