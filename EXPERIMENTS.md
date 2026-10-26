@@ -383,3 +383,24 @@ reply more than citizens) but citizen replies/likes and portal hourly red should
 Next review: grep "citizens:" lines for citizen replies/likes per post; compare portal hourly red with yesterday. If
 throughput falls below ~160/h, raise noncitizen_target_weight to 0.3. If it works, next: make the learner/REPORT count
 only citizens (a measurement change, so do it on its own).
+
+## 2026-10-26 15:10 Adelaide (Mon 04:40 UTC): ACCOUNT ALLOWANCE is now the binding constraint (manual, with Saurav)
+Portal "Platform accounts": Registered 107, Banned 57, Maximum total 200, Maximum active at once 50. Bans ran ~1.5/h
+overnight (35 -> 57 since 21:25 Sun) and every ban is replaced, so at this rate the 200 runs out around 29 Oct, i.e.
+NO accounts for the x4 days (1-2 Nov).
+Spotlit posts: 6 of the 16 big spotlights since 08:00 UTC Sun are now hidden (404): 463402, 471468, 473694, 477471,
+481181, 490731 (the small #30-50 ones from Sun 05:30 survived). Each hidden post costs its author account.
+Points are good: portal hourly red (x2) 11:49 +786, 12:49 +641, 13:49 +1,591 (47 likes, 22 replies, 6 positive
+contributions incl. 1 primary) + 321 blue. Score 46,408.
+Changed:
+- Account pacing (bot.py ensure_accounts): 35 accounts reserved for 1-2 Nov (from 2026-10-31 13:30 UTC); until then new
+  accounts are paced so the rest lasts to that point (log line "ACCOUNTS active a/t, allowance left ..., pace ...");
+  if active drops below 18 we still create (never from the reserve). Active count may shrink; writes stay 3/min.
+- No more retirements (exposed accounts keep writing; still never like/follow/report/boost). The ~10 retired-but-not-
+  banned accounts were put back into use (they occupy active slots anyway).
+- hashtag_rate 0 (locked): campaign hashtags are a classic bot signal for other teams' reporters.
+- Style note: stop repeating the same stock facts (30 ICU beds, 40 nursing posts, nurse clinic + helicopter) across
+  accounts, the most obvious cross-account pattern.
+- spotlight_every_min 90 -> 120 (fewer hidden spotlit posts per day).
+Next reviews: watch the portal banned count per hour (target < 0.8/h) and the ACCOUNTS log line. If bans stay >1/h,
+consider spotlight_every_min 180 or authoring spotlights from already-exposed accounts.

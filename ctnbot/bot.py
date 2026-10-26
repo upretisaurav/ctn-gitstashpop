@@ -114,6 +114,10 @@ class Bot:
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
         self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
         self._privacy_done: set = set(self.db.get("private_accounts", []) or [])
+        if not self.db.get("unretired_v1"):          # retired-but-not-banned accounts are free capacity
+            n = self.db.x("UPDATE our_accounts SET status='active' WHERE status='retired'").rowcount
+            self.db.put("unretired_v1", True)
+            log.info("brought %d retired accounts back into use", n)
         self._last_tick_hook = 0.0
 
     # ======================================================================
@@ -308,17 +312,44 @@ class Bot:
             self.p.resolve_notifications(row, max(n["notification_id"] for n in notes))
 
     # ======================================================================  accounts
+    # The team may create 200 accounts in total (portal: "Maximum total 200", banned and deleted ones count).
+    # Bans were using ~35 a day, which would exhaust the allowance around 29 Oct, before the x4 days.
+    # So: keep a reserve for 1-2 Nov (x4) and pace new accounts until then; let the active count shrink if needed.
+    FINAL_PUSH_START = 1793453400.0      # 2026-10-31 13:30 UTC = 1 Nov 00:00 Adelaide
+    ACCOUNT_RESERVE = 35                 # accounts kept back for the x4 days
+    ACTIVE_FLOOR = 18                    # below this, create even if ahead of pace (never touches the reserve early)
+
     def ensure_accounts(self) -> None:
         if self.cfg.observe_only or self.no_more_accounts or time.time() < self.not_ready_until:
             return
         self.ensure_retirements()
+        now = time.time()
         active = len(self.db.our_accounts("active"))
         target = min(int(self.strategy["target_active_accounts"]), self.cfg.max_active_accounts)
-        if active >= target or self.db.count_our_accounts() >= self.cfg.max_total_accounts:
+        used = self.db.count_our_accounts()
+        left = self.cfg.max_total_accounts - used
+        if active >= target or left <= 0:
             return
+        if now < self.FINAL_PUSH_START:
+            spendable = left - self.ACCOUNT_RESERVE
+            hours = max(1.0, (self.FINAL_PUSH_START - now) / 3600)
+            made_2h = self.db.one("SELECT COUNT(*) c FROM our_accounts WHERE created_at > ?", (now - 7200,))["c"]
+            allowed_2h = max(1.0, 2 * spendable / hours)
+            if now - getattr(self, "_acct_note", 0) > 3600:
+                self._acct_note = now
+                log.info("ACCOUNTS active %d/%d, allowance left %d (reserve %d for 1-2 Nov), pace %.1f per 2 h, made %d in 2 h",
+                         active, target, left, self.ACCOUNT_RESERVE, allowed_2h, made_2h)
+            if spendable <= 0:
+                return
+            if made_2h >= allowed_2h and active >= self.ACTIVE_FLOOR:
+                return
         self.create_account()
 
     def ensure_retirements(self) -> None:
+        """No longer retires accounts. An account with a hidden post may be banned by another team's account
+        report, but a retired account still counts against the 200-account allowance, and retiring one makes us
+        create a replacement. Exposed accounts keep writing but never like, follow, report or boost (see _exposed)."""
+        return
         for row in self.db.our_accounts("active"):
             # An account can only be suspended via an account report once a moderator has hidden one of its
             # posts AND it has 100+ actions. So retire exposed accounts well before 100 (the platform counts
