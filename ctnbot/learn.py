@@ -103,12 +103,16 @@ class EngagementTracker:
                     log.debug("engagement check failed: %s", e)
                     self.db.x("UPDATE our_posts SET checked_at=? WHERE post_id=?", (now, row["post_id"]))
 
+    # Only simulated citizens score points, and they are exactly account ids <= 2343 (every later id is a team
+    # account). The classifier rates ~3,400 rival-team bots as NPCs (npc_score >= 0.6), so counting by npc_score
+    # filled rewards, shift judgements and REPORT with No-side bots answering us. Count citizens only.
+    CITIZEN_MAX_ID = 2343
+    # Posts first scored before this cutoff stored counts that included rival bots; re-scoring them would hand the
+    # bandits a spurious negative delta, so their second check updates the row but skips the bandit reward.
+    CITIZEN_ONLY_SINCE = 1792998000.0       # 2026-10-26 07:00 UTC (deploy of the citizen-only learner)
+
     def _is_npc(self, account_id: int) -> bool:
-        r = self.db.one("SELECT npc_score FROM accounts WHERE account_id=?", (account_id,))
-        if r is None:
-            self.db.x("INSERT OR IGNORE INTO accounts(account_id, first_seen) VALUES(?,?)", (account_id, time.time()))
-            return account_id <= 2343
-        return (r["npc_score"] or 0) >= 0.6
+        return 0 < (account_id or 0) <= self.CITIZEN_MAX_ID
 
     def _score(self, row) -> None:
         pid = row["post_id"]
@@ -125,13 +129,16 @@ class EngagementTracker:
                 self.db.x("UPDATE accounts SET moved_until=? WHERE account_id=?", (time.time() + 2 * 3600, r["author_id"]))
         reward = len(npc_reps) * 1.0 + npc_likes * 0.3 + max(0.0, shift_total) * 3 - max(0.0, -shift_total) * 2
         reward = max(-2.0, min(6.0, reward))
-        prev = self.db.one("SELECT npc_likes,npc_replies,shift_score FROM our_posts WHERE post_id=?", (pid,))
+        prev = self.db.one("SELECT npc_likes,npc_replies,shift_score,checked_at FROM our_posts WHERE post_id=?", (pid,))
+        stale = 0 < (prev["checked_at"] or 0) < self.CITIZEN_ONLY_SINCE     # first check counted rival bots
         delta = reward - ((prev["npc_replies"] or 0) * 1.0 + (prev["npc_likes"] or 0) * 0.3 +
                           max(0.0, prev["shift_score"] or 0) * 3)
         sample = " | ".join((r.get("body") or "")[:200] for r in npc_reps[:2])
         self.db.x("""UPDATE our_posts SET npc_likes=?, npc_replies=?, shift_score=?, checked_at=?,
                      npc_reply_sample=COALESCE(NULLIF(?, ''), npc_reply_sample) WHERE post_id=?""",
                   (npc_likes, len(npc_reps), shift_total, time.time(), sample, pid))
+        if stale:
+            delta = 0.0
         if row["argument"]:
             self.bandit.reward("arg", row["argument"], delta)
         self.bandit.reward("persona", row["persona_key"], delta)

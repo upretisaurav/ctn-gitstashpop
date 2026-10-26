@@ -404,3 +404,28 @@ Changed:
 - spotlight_every_min 90 -> 120 (fewer hidden spotlit posts per day).
 Next reviews: watch the portal banned count per hour (target < 0.8/h) and the ACCOUNTS log line. If bans stay >1/h,
 consider spotlight_every_min 180 or authoring spotlights from already-exposed accounts.
+
+## 2026-10-26 17:30 Adelaide (Mon 07:00 UTC): learner counts citizens only (scheduled review)
+Saw (04:18 deploy -> 06:20 UTC, no crashes/restarts/failed deploys, no WARNING/ERROR besides 2 hidden-sweep finds):
+posts_24h ~4,199 (~175/h, throughput fine). STATUS 04:18->06:18: "NPC" replies +37 (~18/h), likes +212 (~106/h);
+hidden 60 -> 62 (2 in 2 h, was ~7/h), suspended flat 18, accounts_total flat 108 (no replacements needed), 50 active.
+Reports 178 inauthentic / 17 genuine (cumulative), none new. LLM $3.06 today (UTC).
+REPORT 06:18 recent_6h: post pos 25 / neg 12, reply 16 / 14 (reply/0 10/7, reply/1 5/1, reply/-1 1/5), continuation 1/0.
+"citizens:" learn lines 06:00-06:17 (~100 scored posts): 3 citizen replies, ~10 citizen likes in total, i.e. ~1 raw
+point per write; most of the "NPC" engagement in those lines is rival bots.
+Spotlights via public API (all likers paged): ours 547084 1 citizen like of 55 (reached #8, fell to #12 by 59 min),
+538454 6 of 59; rival teams' spotlights 543452 13 of 89 and 540969 12 of 88 (they boost harder, ~45 reposts/43 replies,
+and stay in the top 10 for 2-3 h). Trending's top 15 is now entirely team spotlights.
+Previous changes: citizen-first targeting (12:45) can't be judged from REPORT because the learner still counted rival
+bots (see below); account pacing (15:10) WORKED so far: no account replacements and only 2 hidden posts in 2 h.
+Bug (measurement): learn.py _is_npc counted anyone with npc_score >= 0.6, which includes ~3,400 rival-team bots. So
+bandit rewards (argument/persona/kind), shift judgements, moved_until, REPORT npc_replies/likes/pos/neg and best/worst
+posts were all largely rival bots answering us.
+Changed (ctnbot/learn.py): _is_npc = account id <= 2343 (citizens only). Posts whose first check happened before
+07:00 UTC still get their counts updated on the 3 h re-check, but give the bandits a 0 delta (their old counts included
+bots, so the delta would be a spurious negative). New offline test. Nothing else changed.
+Expect: REPORT npc_replies/npc_likes and pos/neg drop sharply (series break at 07:00 UTC; they are now citizen numbers);
+fewer judge_shift LLM calls (lower spend); bandit arms start moving towards what citizens engage with. Throughput unchanged.
+Next review: read the first citizen-only recent_6h (by_kind, by_target_stance). If reply/-1 is still net negative,
+cut stance -1 to 0.1. Consider spotlight economics: ours earns ~1-6 citizen likes for ~54 writes (~1 pt/write elsewhere);
+either drop it to every 180 min or stop it, unless citizen-only REPORT shows spotlit posts drawing positive shifts.

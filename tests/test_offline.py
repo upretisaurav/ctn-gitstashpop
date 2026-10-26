@@ -205,6 +205,35 @@ def test_spotlight_queues_likes_reposts_and_replies():
         assert bot.db.one("SELECT COUNT(*) c FROM our_posts WHERE kind='repost'")["c"] >= 1
 
 
+def test_tracker_counts_only_citizens_and_skips_stale_bandit_delta():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        tr = bot.tracker
+        # a rival-team bot the classifier rated NPC must not count
+        bot.db.x("INSERT INTO accounts(account_id, npc_score) VALUES(?, 0.95)", (9100,))
+        assert tr._is_npc(120) and tr._is_npc(2343) and not tr._is_npc(2344) and not tr._is_npc(9100)
+        now = time.time()
+        for pid, checked in ((900001, 0), (900002, tr.CITIZEN_ONLY_SINCE - 60)):
+            bot.db.x("""INSERT INTO our_posts(post_id,account_id,persona_key,kind,argument,body,created_at,
+                        npc_likes,npc_replies,checked_at,status) VALUES(?,?,?,?,?,?,?,?,?,?,'visible')""",
+                     (pid, 1, "nan_rosa", "post", "personal_story", "hello", now - 4 * 3600,
+                      0 if not checked else 9, 0 if not checked else 4, checked))
+        bot.p.read = lambda what, pid, **kw: (
+            {} if what == "get_post" else
+            [{"account_id": 120}, {"account_id": 9100}, {"account_id": 7777}] if what == "likers" else
+            [{"author_id": 9100, "body": "No from me"}])
+        bot.writer.judge_shift = lambda a, b: (_ for _ in ()).throw(AssertionError("judged a bot reply"))
+        before = bot.db.one("SELECT reward FROM bandit WHERE arm='arg:personal_story'")
+        for pid in (900001, 900002):
+            tr._score(bot.db.one("SELECT * FROM our_posts WHERE post_id=?", (pid,)))
+        for pid in (900001, 900002):
+            r = bot.db.one("SELECT npc_likes,npc_replies FROM our_posts WHERE post_id=?", (pid,))
+            assert r["npc_likes"] == 1 and r["npc_replies"] == 0, dict(r)
+        after = bot.db.one("SELECT reward FROM bandit WHERE arm='arg:personal_story'")
+        # fresh post: +0.3 for one citizen like; stale post: no (spurious negative) delta
+        assert abs((after["reward"] if after else 0) - (before["reward"] if before else 0) - 0.3) < 1e-9
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):
