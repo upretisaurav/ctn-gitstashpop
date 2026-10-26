@@ -137,5 +137,7 @@ class EngagementTracker:
         self.bandit.reward("persona", row["persona_key"], delta)
         self.bandit.reward("kind", row["kind"], delta)
         self.bandit.reward("gif", "yes" if "giphy" in (row["body"] or "") else "no", delta)
-        log.info("post %s (%s/%s): %d NPC replies, %d NPC likes, shift %.2f", pid, row["persona_key"],
-                 row["argument"], len(npc_reps), npc_likes, shift_total)
+        cit_reps = sum(1 for r in replies if (r.get("author_id") or 10**9) <= 2343)
+        cit_likes = sum(1 for l in likers if (l.get("account_id") or l.get("author_id") or 10**9) <= 2343)
+        log.info("post %s (%s/%s): %d NPC replies, %d NPC likes, shift %.2f (citizens: %d replies, %d likes)", pid,
+                 row["persona_key"], row["argument"], len(npc_reps), npc_likes, shift_total, cit_reps, cit_likes)

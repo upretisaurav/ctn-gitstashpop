@@ -38,6 +38,7 @@
   "lock": [
     "boost_likes_per_post",
     "min_report_confidence",
+    "noncitizen_target_weight",
     "share_top_level",
     "smart_all_writing",
     "spotlight_every_min",
@@ -50,5 +51,6 @@
   "spotlight_every_min": 90,
   "spotlight_likes": 39,
   "spotlight_reposts": 30,
-  "spotlight_replies": 24
+  "spotlight_replies": 24,
+  "noncitizen_target_weight": 0.1
 }

@@ -51,6 +51,7 @@ DEFAULTS: dict[str, Any] = {
     "lowercase_rate": 0.12,
     "like_reply_targets": 0.6,
     "follow_engaged": 0.5,
+    "noncitizen_target_weight": 1.0,
     "lock": [],
 }
 
@@ -74,6 +75,7 @@ NUM_BOUNDS = {
     "lowercase_rate": (0.0, 0.3),
     "like_reply_targets": (0.0, 1.0),
     "follow_engaged": (0.0, 1.0),
+    "noncitizen_target_weight": (0.0, 1.0),
 }
 INT_KEYS = {"spotlight_every_min", "spotlight_likes", "spotlight_reposts", "spotlight_replies", "extra_mentions_per_reply", "mentions_per_post", "boost_likes_per_post", "max_pending_reports",
             "reply_fresh_seconds", "target_active_accounts"}

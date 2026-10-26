@@ -687,6 +687,8 @@ class Bot:
         actor = item["actor"]
         if not self._is_npc(actor):
             return None
+        if actor > NPC_ID_CUTOFF and random.random() >= float(self.strategy["noncitizen_target_weight"]):
+            return None          # not a citizen: a continuation scores nothing, spend the slot on someone who counts
         prof = self._profile(actor)
         if prof and (prof["moved_until"] or 0) > time.time():
             return None
@@ -729,9 +731,9 @@ class Bot:
               AND (p.depth IS NULL OR p.depth < ?)
               AND p.author_id NOT IN (SELECT account_id FROM our_accounts)
               AND p.post_id NOT IN (SELECT COALESCE(target_post,0) FROM our_posts)
-            ORDER BY p.created_at DESC LIMIT 80""",
+            ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 80""",
                            (now - int(self.strategy["reply_fresh_seconds"]), now, now - self.cfg.target_cooldown_minutes * 60,
-                            self.cfg.max_thread_depth))
+                            self.cfg.max_thread_depth, NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
                 and r["author_id"] not in self.busy_people]
         if not rows:
@@ -787,7 +789,11 @@ class Bot:
         depth_w = 1.0 if (r["depth"] in (0, None)) else max(0.3, 1 - 0.1 * r["depth"])
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
         on_topic = 1.0 if ON_TOPIC.search(r["body"] or "") else 0.15     # don't hijack footy posts
-        return (r["npc_score"] or 0) * (r["persuadable"] if r["persuadable"] is not None else 0.5 + 0.0) * \
+        # Only citizens score, and every citizen was created before the game opened (id <= NPC_ID_CUTOFF). ~94% of
+        # the live feed is other teams' accounts that the classifier often rates as "NPC"; replying to them earns
+        # nothing and draws No-side rebuttals. Down-weight them so a citizen wins whenever one is in the pool.
+        citizen_w = 1.0 if r["author_id"] <= NPC_ID_CUTOFF else float(self.strategy["noncitizen_target_weight"])
+        return citizen_w * (r["npc_score"] or 0) * (r["persuadable"] if r["persuadable"] is not None else 0.5 + 0.0) * \
             stance_w * concern_w * fresh * depth_w * trending * on_topic + 0.01
 
     # ---- 3. top-level posts ----------------------------------------------
