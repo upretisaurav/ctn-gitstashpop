@@ -660,3 +660,20 @@ Changed (ctnbot/bot.py): plan_reply records why each pass returned None (no_rows
 logs "FALLBACK to standalone: cit900=..., cit1800=..., backlog=..., mixed=..." at most every 2 min before a
 standalone post. No behaviour change. Next review: read the FALLBACK lines and fix the pass that is running dry
 (likely the 4 h BACKLOG_COOLDOWN_S or pick_account); target POST+LIFE < 10% at night.
+## 2026-10-28 01:10 Adelaide (Tue 14:40 UTC): widen the backlog pool (scheduled review; lands with the FALLBACK log above)
+Saw (11:23 deploy -> 14:20 UTC; no crashes/restarts, transient API timeouts only; suspended 25 -> 26; hidden 72 flat;
+reports 236 inauthentic / 24 genuine; RATELIMIT limit=3 unchanged; LLM $6.82 today (UTC)). REPORT 13:23 recent_6h:
+reply n=533 0.068 replies / 0.06 likes pos 15 neg 5; post n=200 0.01 / 0.015; continuation n=40 0.125; life n=43 0.
+Writes: 12 UTC 97 REPLY + 57 POST (~165/h); 13:20-14:20 (night) 88 REPLY + ~31 POST.
+Previous change (backlog pass) WORKS on aim but runs dry: public feed 12:00-14:23 UTC (8,300 posts, 185 of our
+replies matched): parent age <1 min 48 (11 answered by a citizen already, 23%), 1-5 min 18 (1), 5-30 min 28 (0),
+30 min-6 h 73 (2), > 6 h 18 (0); 100% of replies went to citizens. Backlog replies are answered next session, so
+their payoff shows in the 22 h check / portal on 28 Oct. But standalone POST lines: 11:20-12:20 ~10, then 54 in
+12:20-13:00, i.e. the backlog pool emptied after ~1 h. Cause: last_targeted is set for the target AND the 2 citizens
+@-mentioned in each reply (~500 citizen touches/h), so the 4 h backlog cooldown over 24 h of posters left too few.
+Citizen replies in the feed 12:00-14:23: 526, 18 to us (3.4%).
+Changed (ctnbot/bot.py): BACKLOG_COOLDOWN_S 4 h -> 2 h, BACKLOG_MAX_AGE_S 24 h -> 36 h (citizens' sessions are
+22-46 h apart, so a 24-36 h-old poster is about due back). Fresh/30-min passes untouched.
+Expect by next run (18:20 UTC, night): standalone POST lines < 10/h in any hour 15-18 UTC except deliberate night
+skips; REPLY lines up accordingly; no slowdown of the planning loop (query still indexed). Check 22 h "citizens:"
+lines for replies sent 11-14 UTC (backlog) vs fresh ones. If suspensions climb (> +3 in 4 h), go back to 3 h.

@@ -856,11 +856,15 @@ class Bot:
     REPLY_COOLDOWN_S = 600
     REPLIES_PER_CITIZEN_PER_HOUR = 3
     SESSION_WINDOW_S = 1800
-    # Backlog pass (fills slots that used to go to standalone posts): citizen posts 30 min - 24 h old, one reply per
-    # citizen per 4 h so our notifications are spread over many citizens' next sessions, no freshness decay.
+    # Backlog pass (fills slots that used to go to standalone posts): citizen posts 30 min - 36 h old, one reply per
+    # citizen per 2 h so our notifications are spread over many citizens' next sessions, no freshness decay.
+    # 27 Oct 11:23-12:20 UTC the pass filled the slots, then the pool ran dry: last_targeted is also set for the 2
+    # citizens @-mentioned in every reply (~500 citizen touches an hour), so a 4 h cooldown over 24 h of posters left
+    # too few, and 54 standalone posts went out 12:20-13:00 (~0.01 citizen replies each). Citizens' sessions are
+    # 22-46 h apart, so a poster from 24-36 h ago is about due back and will read the reply then.
     BACKLOG_MIN_AGE_S = 1800
-    BACKLOG_MAX_AGE_S = 24 * 3600
-    BACKLOG_COOLDOWN_S = 4 * 3600
+    BACKLOG_MAX_AGE_S = 36 * 3600
+    BACKLOG_COOLDOWN_S = 2 * 3600
     BACKLOG_MIN_SCORE = 0.05
 
     def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False, backlog: bool = False):
