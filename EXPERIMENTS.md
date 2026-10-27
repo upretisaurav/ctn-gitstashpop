@@ -687,3 +687,14 @@ hard-No earned 0.147 replies/post but 3 negative vs 1 positive shift; an "away" 
 a 600 s decay instead of 150 s (its whole point is posts 5-30 min old).
 Expect by next run: FALLBACK lines rare, night POST+LIFE < 10% of writes, REPLY lines ~150/h at night too. Watch neg
 shifts in REPORT (24 h neg 27 vs pos 59 at 13:23): if neg rises above ~half of pos, raise BACKLOG_MIN_SCORE to 0.03.
+
+## 2026-10-28 04:45 Adelaide (Tue 18:15 UTC): no change, measure the 15:00 deploy (scheduled review)
+Saw (15:01 deploy -> 18:15 UTC, night; no crashes/restarts; transient API/SSL timeouts and one Claude 500 only):
+suspended 26 flat, hidden 74 flat, reports 248 inauthentic / 24 genuine, LLM $8.76 today (UTC). REPORT 17:01 recent_6h:
+reply n=609 0.056 replies / 0.062 likes pos 14 neg 5; post n=106 0.009; continuation n=34 0.147 (pos 1 neg 2);
+life n=42 0. 24 h shifts pos 63 / neg 28 (0.44, under the 0.5 alarm).
+Previous change (backlog bar 0.02, hard-No out, 600 s decay) WORKS: zero FALLBACK lines since 15:01 (was every few
+min before); 15:05-18:15 non-reply writes: POST 10, LIFE 31, CONTINUATION 21, i.e. POST ~3/h (was ~35/h), POST+LIFE
+~8-9% of ~157 writes/h at night (target <= 10%). LIFE is the designed every-18th-post camouflage; left alone.
+Changed: nothing (night; one measurable change at a time). The backlog replies' payoff is the 22 h "citizens:" check
+and portal 28 Oct 06-12 UTC: expect citizen replies/h 20+ vs ~15 on 27 Oct at the same hours.
