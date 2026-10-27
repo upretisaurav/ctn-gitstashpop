@@ -57,6 +57,7 @@ class Platform:
         self.db = db
         self.limits = limits
         self._sessions: dict[int, object] = {}
+        self._rl_logged = 0.0
         if cfg.fake_platform:
             self.social = FakeSocial()
             self.news = FakeNews()
@@ -175,6 +176,12 @@ class Platform:
         self.db.x("UPDATE our_accounts SET last_used=?, actions=actions+? , posts_made=posts_made+? WHERE account_id=?",
                   (time.time(), 1 if counts_as_action else 0, 1 if fn_name in ("post", "reply") else 0,
                    row["account_id"]))
+        # The organisers may change the per-team limits during the game ("read them from rate_limit rather than
+        # hard-coding them"), so show what the server said about the write budget every 10 minutes.
+        rl = getattr(acct, "rate_limit", None)
+        if rl is not None and fn_name in ("post", "reply", "repost") and time.time() - self._rl_logged > 600:
+            self._rl_logged = time.time()
+            log.info("RATELIMIT writes: %s (we pace at %s/min)", rl, self.cfg.writes_per_min)
         return out
 
     def post(self, row, body: str) -> dict:

@@ -20,10 +20,12 @@ HOW TO WRITE (this matters more than anything else):
 - You are an ordinary Kingstonian posting on Legit Social. Write ONE post in first person as your persona.
 - Sound like a real local typing on their phone, not a press release: contractions, plain words, the odd
   casual word (ngl, tbh, heaps, reckon, nah, kinda) used sparingly, and fit your persona's voice.
-- Replies: 2-4 sentences, about 200-320 characters. Plain text. No lists, no hashtags unless asked,
+- Replies: 2-3 sentences, about 160-300 characters. Plain text. No lists, no hashtags unless asked,
   no emojis. Never use em dashes or en dashes; use commas or full stops instead.
-- Engage with the exact thing they said. Do not open with a formula like "Your worry about X is real" or
-  "I hear you" - vary it, or just answer directly.
+- Your FIRST sentence answers the exact thing they just said, in their terms (their example, their worry,
+  their question), the way a friend replying in a thread would. Only then add your own detail. A persona
+  story that ignores their point reads as a script and gets ignored. Do not open with a formula like
+  "Your worry about X is real" or "I hear you" - vary it, or just answer directly.
 - Make them feel heard by acknowledging THEM (their job, family, what they care about) in a few words, not by
   agreeing with the No case. Never repeat or validate the No side's talking points (unpublished venue list,
   no end date or sunset, "blank cheque", staff stuck checking certificates), and never say a gap "bothers you
@@ -110,7 +112,7 @@ class Writer:
                 f"You said: \"{our_post[:400]}\"\nThey answered you: \"{their_reply[:500]}\"\n"
                 f"Earlier in the thread:\n{ctx}\n"
                 f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n\n"
-                f"Keep the conversation going (2-4 sentences, 200-320 characters): pick up the exact thing they said, "
+                f"Keep the conversation going (2-3 sentences, 160-300 characters): answer the exact thing they said first, "
                 f"add one new personal detail or one new fact they haven't heard yet, and leave them something easy to "
                 f"answer. If they are moving your way, say so warmly and build on it, don't push. If they raised a new "
                 f"doubt, answer it with a reason for Yes without restating the doubt or agreeing it is a problem. If they "

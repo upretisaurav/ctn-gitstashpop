@@ -555,3 +555,41 @@ Expect by next run (06:20 UTC, daytime ends 05:00): >80% of our replies to citiz
 citizen replies to us ~15-20/h (from ~12/h in the feed, ~8/h in STATUS), CONTINUATION ~20-30/h; reply-back rate may
 fall from 20% (older/deeper targets) but total citizen replies should rise. Throughput unchanged ~175/h. If citizen
 replies/h fall, revert to the mixed pass first.
+
+## 2026-10-27 13:40 Adelaide (Tue 03:10 UTC): target citizens in session, up to 3 replies each, stop filling slots with standalone posts (manual, Saurav asked "what worked and didn't since the gap is increasing")
+Ground truth (portal activity log CSV, ×2 era): hourly red 25 Oct 14-17 UTC 1,170/1,073/1,104/1,222; 26 Oct 09-16 UTC slump
+703/590/413/720/402/698/459/267; 26 Oct 17-23 UTC 572/686/922/799/817/528/862; 27 Oct 00-02 UTC 1,019/801/1,036.
+Points are replies (15) + likes (5): 02 UTC = 22 replies, 21 likes, 2 follows; changes of mind add ~5-10%. Views hit the
+500/day cap within ~8 h of the Sydney midnight reset every day (1,000 pts/day, nothing more to get there).
+Leaderboard 02:25 UTC: us 64,153 (19th, ~1,080/h over the last 4 h); 1st 186,451 (~3,190/h); 10th 104,193 (~1,670/h);
+18th 67,522. Gap to 10th grows ~600/h at the current pace.
+What worked: night standalone cap (suspensions 23 -> 24 in 14 h, was +3-5 per 4 h); follow-ups from the latest feed
+(CONTINUATION 12 of 88 writes in 01:30-02:00 UTC, was ~6/h); first-reply latency p50 33 s; LLM ~$14/day.
+What didn't: 01:30-02:00 UTC writes were REPLY 53 / POST 18 / CONTINUATION 12 / LIFE 5, and of the tracked REPLY sample
+8 of 23 went to other teams' bots. So ~45% of writes (standalone posts + replies to bots) earn nothing; tracked posts
+3.7-7.7 h old had 0.05 citizen likes and 0.08 citizen replies per post.
+Market study (public API, 27 Oct 01:45-03:00 UTC): citizens act in SESSIONS - a burst of 15-30 replies in ~1 h, then
+a day or more away (10 top repliers: 24/20/18/18/17/16/15/15/14/13 replies in the last hour, previous bursts 22-46 h
+earlier). 95 citizens wrote 605 replies in 90 min (95% from citizens with >= 3 replies); 85 new citizen posts. 91% of
+citizen replies answer a team reply addressed to them; 76% sit in citizen-rooted threads; only 4 of 108 answered a
+standalone team post. Latency team reply -> citizen answer: 10% < 3 min, 25% < 1.4 h, median 20 h, 90% < 44 h (they
+answer from their notification backlog next session). Of 755 team replies to 12 in-session citizens in 48 h, 172 were
+answered (23%): sent during the session 19%, 1-24 h before it 39%, > 24 h before 23%. Accounts that out-earn ours
+(zoez46: 0.40 citizen likes/post, 0.15 replies/post at 13 h; kayak_dad24) fire 60-100 replies at 22-33 in-session
+citizens in 20-35 min, 86% in citizen-rooted threads, ~3 replies per citizen on different posts, ~195 chars, first
+sentence answers the citizen's exact point. Our 45-min per-citizen cooldown capped us at ~60 citizen targets/h, so the
+other ~100 slots went to standalone posts and bots. Team write limit confirmed 3/min shared (getting-started page), so
+the whole game is what each of the 180 slots earns.
+Changed: (1) ctnbot/bot.py plan_reply: per-citizen cooldown 45 min -> 10 min, at most 3 replies per citizen per hour,
+pool 5 -> 15 min (reply_fresh_seconds 900, now locked), only the two newest posts per author, LIMIT 120;
+_target_score: session_w = 1 + 0.12 * min(posts by the author in the last 30 min, 10), fresh decay 150 s -> 400 s,
+off-topic replies inside citizen-rooted threads 0.15 -> 0.45. (2) strategy.json share_top_level 0.1 -> 0.05,
+noncitizen_target_weight 0.1 -> 0.03. (3) persuade.py + style note: first sentence answers their exact point, 2-3
+sentences, 160-300 chars. (4) learn.py: third engagement check at ~22 h (late answers were never counted). (5)
+platform.py logs the server's write RATELIMIT every 10 min. New offline test. The 12:50 review's citizens-first
+pass order (fresh citizens, citizens up to 30 min, then the mixed pass) is kept underneath; the two changes stack.
+Expect by next run (04:20 / 08:20 UTC): POST+LIFE <= 10% of writes, REPLY lines ~150/h nearly all to citizens
+(check "parent=team" via REPORT), citizen replies/h on the portal 30+ (was 15-22), likes 30+; hourly red 1,300+.
+If writes/h fall below ~150 (no targets), raise reply_fresh_seconds is already at its bound: lower
+REPLY_COOLDOWN_S to 300 instead. Watch suspensions: 3 replies per citizen from different accounts is normal, from the
+same account it is a continuation, so no new ban exposure expected.

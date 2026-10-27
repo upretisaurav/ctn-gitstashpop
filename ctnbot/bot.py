@@ -829,26 +829,50 @@ class Bot:
         return job
 
     # ---- 2. replies to fresh NPC posts -------------------------------------
+    # Citizens are online in bursts: a session of ~15-30 replies in about an hour, then a day or more away. The
+    # ~95 citizens in session over 90 min wrote 95% of all citizen replies (27 Oct 02:30 UTC sample: 605 replies,
+    # 95 authors, 85 posts). Their answers go to replies waiting in their notifications, 23% of them overall and
+    # ~19% of replies sent while they are online. Accounts that out-earn ours fire 60-100 replies at 22-33
+    # in-session citizens inside half an hour, i.e. ~3 per citizen on different posts of theirs. A 45-min
+    # per-citizen cooldown left us only ~60 citizen targets an hour, and the other 100+ slots went to standalone
+    # posts (0 citizen engagement) and other teams' bots (score nothing). So: a 10-min cooldown, at most 3 replies
+    # per citizen per hour, the pool widened to 15 min, and in-session citizens weighted up.
+    REPLY_COOLDOWN_S = 600
+    REPLIES_PER_CITIZEN_PER_HOUR = 3
+    SESSION_WINDOW_S = 1800
+
     def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False):
         now = time.time()
         fresh_seconds = int(fresh_seconds or self.strategy["reply_fresh_seconds"])
         rows = self.db.all("""
             SELECT p.post_id, p.author_id, p.kind, p.body, p.reply_to, p.root_id, p.created_at, p.depth,
                    a.npc_score, a.stance, a.stance_vacc, a.stance_yearly, a.concerns, a.identity, a.persuadable,
-                   a.username, a.moved_until, a.last_targeted
+                   a.username, a.moved_until, a.last_targeted,
+                   (SELECT COUNT(*) FROM posts q WHERE q.author_id = p.author_id AND q.created_at > ?) AS recent_n
             FROM posts p JOIN accounts a ON a.account_id = p.author_id
             WHERE p.created_at > ? AND p.kind IN ('post','reply') AND p.body IS NOT NULL AND length(p.body) > 25
               AND a.npc_score >= 0.7 AND COALESCE(a.moved_until,0) < ? AND COALESCE(a.last_targeted,0) < ?
               AND (p.depth IS NULL OR p.depth < ?)
               AND p.author_id NOT IN (SELECT account_id FROM our_accounts)
               AND p.post_id NOT IN (SELECT COALESCE(target_post,0) FROM our_posts)
-            ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 80""",
-                           (now - fresh_seconds, now, now - self.cfg.target_cooldown_minutes * 60,
-                            self.cfg.max_thread_depth, NPC_ID_CUTOFF))
+              AND (SELECT COUNT(*) FROM our_posts o WHERE o.target_id = p.author_id AND o.kind = 'reply'
+                   AND o.created_at > ?) < ?
+            ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
+                           (now - self.SESSION_WINDOW_S, now - fresh_seconds, now, now - self.REPLY_COOLDOWN_S,
+                            self.cfg.max_thread_depth, now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
+                            NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
                 and r["author_id"] not in self.busy_people]
         if citizens_only:
             rows = [r for r in rows if r["author_id"] <= NPC_ID_CUTOFF]
+        # Only the two newest posts of each author: the one they are still reading notifications for.
+        seen: dict = {}
+        newest = []
+        for r in rows:                                    # rows arrive newest first
+            seen[r["author_id"]] = seen.get(r["author_id"], 0) + 1
+            if seen[r["author_id"]] <= 2:
+                newest.append(r)
+        rows = newest
         if not rows:
             return None
         # Who started each thread? The accounts that earn the most citizen replies mostly reply inside threads the
@@ -914,17 +938,25 @@ class Bot:
         if r["stance"] == 2 and ((r["stance_yearly"] or 0) < 0 or (r["stance_vacc"] or 0) < 0):
             stance_w = 0.5            # yearly/general vaccination views also pay 160
         age = max(0.0, now - (r["created_at"] or now))
-        fresh = math.exp(-age / 150.0)
+        # A citizen in session answers ~19% of replies sent while they are online; one who has gone quiet answers
+        # from the backlog a day later or never. So weight by how busy the author is right now (posts in the last
+        # 30 min, from the feed we ingest) and let a post age more gently than before: their newest post is what
+        # they are reading notifications for, and plan_reply already keeps only the two newest per author.
+        recent_n = int(r["recent_n"] or 0) if "recent_n" in r.keys() else 0
+        session_w = 1.0 + 0.12 * min(recent_n, 10)
+        fresh = math.exp(-age / 400.0)
         # Citizens keep talking 4-8 deep in their own threads, so depth only counts against us in someone else's.
         depth_w = 1.0 if citizen_rooted else max(0.3, 0.6 - 0.1 * (r["depth"] or 0))
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
-        on_topic = 1.0 if ON_TOPIC.search(r["body"] or "") else 0.15     # don't hijack footy posts
+        # Don't hijack footy posts; a reply inside a citizen's own thread is usually still about the referendum
+        # even when the sentence itself ("that's fair, I'd want it written in") carries none of the keywords.
+        on_topic = 1.0 if ON_TOPIC.search(r["body"] or "") else (0.45 if (r["kind"] == "reply" and citizen_rooted) else 0.15)
         # Only citizens score, and every citizen was created before the game opened (id <= NPC_ID_CUTOFF). ~94% of
         # the live feed is other teams' accounts that the classifier often rates as "NPC"; replying to them earns
         # nothing and draws No-side rebuttals. Down-weight them so a citizen wins whenever one is in the pool.
         citizen_w = 1.0 if r["author_id"] <= NPC_ID_CUTOFF else float(self.strategy["noncitizen_target_weight"])
         return citizen_w * (r["npc_score"] or 0) * (r["persuadable"] if r["persuadable"] is not None else 0.5 + 0.0) * \
-            stance_w * concern_w * fresh * depth_w * trending * on_topic + 0.01
+            stance_w * concern_w * fresh * session_w * depth_w * trending * on_topic + 0.01
 
     # ---- 3. top-level posts ----------------------------------------------
     def plan_top_level(self):

@@ -99,7 +99,7 @@ def test_strategist_respects_bounds_and_locks():
         repo_conf = json.loads(REPO_FILE.read_text())["min_report_confidence"]
         assert bot.strategy["min_report_confidence"] == repo_conf     # locked in strategy.json
         assert "Keep it short." not in bot.writer.system          # style_notes are locked in strategy.json
-        assert "200-320 characters" in bot.writer.system
+        assert "160-300 characters" in bot.writer.system
 
 
 def test_full_loop_in_simulator():
@@ -305,6 +305,31 @@ def test_citizen_answers_from_latest_feed_queue_follow_ups_once():
         assert len(bot.continuations) == 1                            # no duplicate from the next poll
         job = bot.plan_continuation()
         assert job is not None and job["target_post_id"] == 9100
+
+
+def test_reply_targets_prefer_citizens_in_session_and_cap_per_citizen():
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        bot.create_account()
+        now = time.time()
+        body = "the certificate thing at the clinic still worries me tbh"
+        def cit(aid, n_posts, age):
+            bot.db.x("INSERT OR REPLACE INTO accounts(account_id, npc_score, persuadable, stance, concerns, classified_at) "
+                     "VALUES(?,?,?,?,?,?)", (aid, 0.99, 0.6, 0, "[]", now))
+            for i in range(n_posts):
+                bot.db.x("INSERT OR REPLACE INTO posts(post_id, author_id, kind, body, created_at, depth) VALUES(?,?,?,?,?,?)",
+                         (aid * 100 + i, aid, "reply", body, now - age - i * 60, 2))
+        cit(700, 1, 30)            # one quiet citizen, brand-new post
+        cit(800, 8, 240)           # a citizen in session: 8 posts in the last 30 min, newest 4 min old
+        job = bot.plan_reply()
+        assert job is not None and job["target_author"] == 800, "in-session citizen should win over a quiet one"
+        # Only the two newest posts of an author are candidates, and at most 3 replies per citizen per hour.
+        for k in range(3):
+            bot.db.x("INSERT INTO our_posts(post_id, account_id, kind, target_id, target_post, created_at) VALUES(?,?,?,?,?,?)",
+                     (9200 + k, 1, "reply", 800, 80000 + k, now - 60))
+        bot.db.x("UPDATE accounts SET last_targeted=0 WHERE account_id=800")
+        job = bot.plan_reply()
+        assert job is not None and job["target_author"] == 700, "citizen 800 is capped at 3 replies this hour"
 
 
 if __name__ == "__main__":

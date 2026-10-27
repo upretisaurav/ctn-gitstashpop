@@ -1,7 +1,7 @@
 {
   "_comment": "Baseline strategy. Edit + push to main and Render redeploys. The in-bot strategist adjusts these within bounds every ~4h unless a key is listed in lock. See ctnbot/strategy.py for the allowed keys and ranges.",
   "target_active_accounts": 40,
-  "share_top_level": 0.1,
+  "share_top_level": 0.05,
   "extra_mentions_per_reply": 2,
   "mentions_per_post": 4,
   "boost_likes_per_post": 2,
@@ -12,7 +12,7 @@
   "lowercase_rate": 0.12,
   "min_report_confidence": 0.9,
   "max_pending_reports": 24,
-  "reply_fresh_seconds": 300,
+  "reply_fresh_seconds": 900,
   "smart_reply_min_persuadable": 0.55,
   "stance_weights": {
     "-2": 0.1,
@@ -29,7 +29,7 @@
     "Only mention the unpublished venue list or end date if the person raised it themselves",
     "Never volunteer the No side's talking points (venue list, end date, sunset) in a reply unless the person raised them",
     "Don't lean on the same stock facts every post (30 ICU beds, 40 nursing posts, nurse clinic and a helicopter); use a different detail or a personal moment instead",
-    "Replies and follow-ups: 2-4 sentences, 200-320 characters, with one concrete personal detail; short one-liners read as dismissive",
+    "Replies and follow-ups: 2-3 sentences, 160-300 characters. First sentence answers the exact point they just made (their words, their example); then one concrete detail of your own. Short one-liners read as dismissive; a story that ignores their point reads as a script",
     "In a follow-up, never repeat a point already made in the thread; bring something new"
   ],
   "avoid_phrases": [
@@ -50,12 +50,13 @@
     "spotlight_replies",
     "spotlight_reposts",
     "stance_weights",
-    "style_notes"
+    "style_notes",
+    "reply_fresh_seconds"
   ],
   "smart_all_writing": 1.0,
   "spotlight_every_min": 0,
   "spotlight_likes": 39,
   "spotlight_reposts": 30,
   "spotlight_replies": 24,
-  "noncitizen_target_weight": 0.1
+  "noncitizen_target_weight": 0.03
 }
