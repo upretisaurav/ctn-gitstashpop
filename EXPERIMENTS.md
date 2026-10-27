@@ -646,3 +646,17 @@ query ran the per-row "replies to this citizen in the last hour" subquery over a
 post of the day (benchmark at 100k posts / 8k our_posts: 20 s per plan). Fixed: indexes our_posts(target_id,
 created_at), our_posts(target_post), posts(author_id, created_at), and citizens filtered in SQL for citizens-only
 passes (same benchmark: 0.2 s backlog, 0.01 s fresh passes, all passes faster than before).
+
+## 2026-10-28 01:20 Adelaide (Tue 14:50 UTC): FALLBACK diagnostic (manual, Saurav asked for a full review)
+Portal 14:15 UTC: 72,352 points, 18th (up one place). Since 02:25 UTC: us +8,199 (~690/h), 1st +19,855 (~1,680/h),
+10th +12,614 (~1,070/h); everyone slows at night, our share of 10th's pace is unchanged (~0.65).
+Hourly red since the 03:22 deploy: 770/674/890/757/790/793/785/699/397 (the 11:00 stall)/535/809, citizen replies/h
+13-18, likes 16-26 - same as before the change. As the 21:25 review found, citizens answer from their backlog
+(median 20 h), so today's replies pay out tomorrow; judge the 03:10 + 10:55 changes on 28 Oct 06-12 UTC.
+Still wrong tonight: 13:34-14:16 UTC writes REPLY 60 / POST 18 / LIFE 6 / CONTINUATION 5 (~127/h, POST+LIFE 27%),
+i.e. the backlog pass is not filling the slots it was meant to. Market: only 33-77 distinct citizens post per hour
+at night (415 in 8 h), so the fresh pools are small, but the 24 h backlog pool should not be empty.
+Changed (ctnbot/bot.py): plan_reply records why each pass returned None (no_rows / score / no_account) and _plan
+logs "FALLBACK to standalone: cit900=..., cit1800=..., backlog=..., mixed=..." at most every 2 min before a
+standalone post. No behaviour change. Next review: read the FALLBACK lines and fix the pass that is running dry
+(likely the 4 h BACKLOG_COOLDOWN_S or pick_account); target POST+LIFE < 10% at night.

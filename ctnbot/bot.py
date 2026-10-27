@@ -113,6 +113,8 @@ class Bot:
         self.plan_backoff_until = 0.0
         self._skip_slot_until = 0.0
         self._last_night_post = 0.0
+        self._miss: dict = {}                 # why each reply pass last returned None (for the FALLBACK log)
+        self._fallback_logged = 0.0
         self._bg_threads: dict = {}
         self.spotlights: list = []          # our posts being pushed into Trending (see start_spotlight)
         self._last_spotlight = float(self.db.get("last_spotlight", 0) or 0)   # survives restarts/deploys
@@ -555,6 +557,10 @@ class Bot:
                       or time.time() - self._last_night_post < self.NIGHT_POST_GAP):
             self._skip_slot_until = time.time() + self.NIGHT_SKIP_SECONDS
             return None
+        # Every standalone post means all reply passes came up empty; say why, so the reviews can see it.
+        if time.time() - self._fallback_logged > 120:
+            self._fallback_logged = time.time()
+            log.info("FALLBACK to standalone: %s", ", ".join(f"{k}={v}" for k, v in self._miss.items()) or "no reasons recorded")
         job = self.plan_top_level()
         if job and night:
             self._last_night_post = time.time()
@@ -894,7 +900,9 @@ class Bot:
             if seen[r["author_id"]] <= 2:
                 newest.append(r)
         rows = newest
+        pass_name = "backlog" if backlog else f"cit{fresh_seconds}" if citizens_only else "mixed"
         if not rows:
+            self._miss[pass_name] = "no_rows"
             return None
         # Who started each thread? The accounts that earn the most citizen replies mostly reply inside threads the
         # citizen started (their own post, or their replies within it); a citizen talking to another bot is a
@@ -915,11 +923,14 @@ class Bot:
         # Any on-topic citizen is worth a write (only citizens score); the 0.05 bar was for weighed-down rival bots
         # and older citizen posts (freshness decays over 150 s), which left the 30 min fallback almost unused.
         if score <= (self.BACKLOG_MIN_SCORE if backlog else self.CITIZEN_MIN_SCORE if citizens_only else 0.05):
+            self._miss[pass_name] = f"score {score:.3f} (rows {len(rows)})"
             return None
         concerns = json.loads(r["concerns"] or "[]") or ["other"]
         row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)
         if row is None:
+            self._miss[pass_name] = f"no_account (rows {len(rows)}, busy {len(self.busy_accounts)})"
             return None
+        self._miss.pop(pass_name, None)
         if self._life_post_due(row):
             return {"kind": "life", "row": dict(row)}
         arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for(concerns),
