@@ -541,7 +541,14 @@ class Bot:
         # Nobody fresh to talk to. Citizens read their notifications next session, so a reply to a post up to
         # 30 min old still lands; a standalone post at night mostly earns reports. A citizen, even an older post,
         # beats any other team's account: 27 Oct public feed, 102 of our 213 replies went to rival bots (0 points).
-        job = self.plan_reply(fresh_seconds=1800, citizens_only=True) or self.plan_reply()
+        # Then the backlog: 27 Oct 09-10 UTC, 62% of all citizen replies answered a team reply sent > 24 h earlier and
+        # only 20% one sent < 6 min earlier (citizens work through their notifications next session). A reply to a
+        # citizen's post from the last day therefore still earns, where a standalone post (~0.01 citizen replies)
+        # or another team's account earns nothing. 79 of our 104 standalone posts that evening went out while the
+        # fresh pool was empty for us.
+        job = (self.plan_reply(fresh_seconds=1800, citizens_only=True)
+               or self.plan_reply(citizens_only=True, backlog=True)
+               or self.plan_reply())
         if job:
             return job
         if night and (random.random() < self.NIGHT_SKIP
@@ -843,17 +850,27 @@ class Bot:
     REPLY_COOLDOWN_S = 600
     REPLIES_PER_CITIZEN_PER_HOUR = 3
     SESSION_WINDOW_S = 1800
+    # Backlog pass (fills slots that used to go to standalone posts): citizen posts 30 min - 24 h old, one reply per
+    # citizen per 4 h so our notifications are spread over many citizens' next sessions, no freshness decay.
+    BACKLOG_MIN_AGE_S = 1800
+    BACKLOG_MAX_AGE_S = 24 * 3600
+    BACKLOG_COOLDOWN_S = 4 * 3600
+    BACKLOG_MIN_SCORE = 0.05
 
-    def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False):
+    def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False, backlog: bool = False):
         now = time.time()
         fresh_seconds = int(fresh_seconds or self.strategy["reply_fresh_seconds"])
+        newest_at, cooldown = now, self.REPLY_COOLDOWN_S
+        if backlog:
+            fresh_seconds, newest_at = self.BACKLOG_MAX_AGE_S, now - self.BACKLOG_MIN_AGE_S
+            cooldown = self.BACKLOG_COOLDOWN_S
         rows = self.db.all("""
             SELECT p.post_id, p.author_id, p.kind, p.body, p.reply_to, p.root_id, p.created_at, p.depth,
                    a.npc_score, a.stance, a.stance_vacc, a.stance_yearly, a.concerns, a.identity, a.persuadable,
                    a.username, a.moved_until, a.last_targeted,
                    (SELECT COUNT(*) FROM posts q WHERE q.author_id = p.author_id AND q.created_at > ?) AS recent_n
             FROM posts p JOIN accounts a ON a.account_id = p.author_id
-            WHERE p.created_at > ? AND p.kind IN ('post','reply') AND p.body IS NOT NULL AND length(p.body) > 25
+            WHERE p.created_at > ? AND p.created_at <= ? AND p.kind IN ('post','reply') AND p.body IS NOT NULL AND length(p.body) > 25
               AND a.npc_score >= 0.7 AND COALESCE(a.moved_until,0) < ? AND COALESCE(a.last_targeted,0) < ?
               AND (p.depth IS NULL OR p.depth < ?)
               AND p.author_id NOT IN (SELECT account_id FROM our_accounts)
@@ -861,7 +878,7 @@ class Bot:
               AND (SELECT COUNT(*) FROM our_posts o WHERE o.target_id = p.author_id AND o.kind = 'reply'
                    AND o.created_at > ?) < ?
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
-                           (now - self.SESSION_WINDOW_S, now - fresh_seconds, now, now - self.REPLY_COOLDOWN_S,
+                           (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
                             self.cfg.max_thread_depth, now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
@@ -892,10 +909,11 @@ class Bot:
                 return True
             ra = root_author.get(r["root_id"])
             return ra is not None and ra <= NPC_ID_CUTOFF
-        score, r = max(((self._target_score(r, now, cit_rooted(r)), r) for r in rows), key=lambda t: t[0])
+        score, r = max(((self._target_score(r, now, cit_rooted(r), backlog=backlog), r) for r in rows),
+                       key=lambda t: t[0])
         # Any on-topic citizen is worth a write (only citizens score); the 0.05 bar was for weighed-down rival bots
         # and older citizen posts (freshness decays over 150 s), which left the 30 min fallback almost unused.
-        if score <= (self.CITIZEN_MIN_SCORE if citizens_only else 0.05):
+        if score <= (self.BACKLOG_MIN_SCORE if backlog else self.CITIZEN_MIN_SCORE if citizens_only else 0.05):
             return None
         concerns = json.loads(r["concerns"] or "[]") or ["other"]
         row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)
@@ -933,7 +951,7 @@ class Bot:
         job.update(text=text, model=model, mentions=[a for a, _ in extra])
         return job
 
-    def _target_score(self, r, now: float, citizen_rooted: bool = True) -> float:
+    def _target_score(self, r, now: float, citizen_rooted: bool = True, backlog: bool = False) -> float:
         sw = self.strategy["stance_weights"]
         stance_w = float(sw.get(str(r["stance"]), 0.7)) if r["stance"] is not None else 0.7
         concerns = json.loads(r["concerns"] or "[]")
@@ -951,7 +969,7 @@ class Bot:
         # time, 30-60 s 8%, 1-2 min 6%, 2-5 min 4%, 5-15 min 1%. With a 400 s decay 43% of our replies went to posts
         # over 5 min old (0 answered) and our reply-back fell from 20% to 4%. Back to a steep decay: an older post
         # only wins when nothing fresh is in the pool.
-        fresh = math.exp(-age / 150.0)
+        fresh = 1.0 if backlog else math.exp(-age / 150.0)     # backlog: answered next session, age hardly matters
         # Citizens keep talking 4-8 deep in their own threads, so depth only counts against us in someone else's.
         depth_w = 1.0 if citizen_rooted else max(0.3, 0.6 - 0.1 * (r["depth"] or 0))
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0

@@ -275,12 +275,12 @@ def test_follow_ups_with_everyone_until_two_pushbacks():
         # citizens first: fresh citizens, then older citizens, and only then another team's account
         calls = []
         bot.is_night = lambda: False
-        bot.plan_reply = lambda fresh_seconds=None, citizens_only=False: (
-            calls.append((fresh_seconds, citizens_only)) or ({"kind": "reply"} if not citizens_only else None))
+        bot.plan_reply = lambda fresh_seconds=None, citizens_only=False, backlog=False: (
+            calls.append((fresh_seconds, citizens_only, backlog)) or ({"kind": "reply"} if not citizens_only else None))
         share = bot.strategy._data.get("share_top_level")
         bot.strategy._data["share_top_level"] = 0.0
         assert bot._plan() == {"kind": "reply"}
-        assert calls == [(None, True), (1800, True), (None, False)], calls
+        assert calls == [(None, True, False), (1800, True, False), (None, True, True), (None, False, False)], calls
         bot.strategy._data["share_top_level"] = share
         for k, v in saved.items():
             setattr(bot, k, v)
@@ -336,6 +336,17 @@ def test_reply_targets_prefer_citizens_in_session_and_cap_per_citizen():
         bot._release(job)
         job = bot.plan_reply()
         assert job is not None and job["target_author"] == 700, "citizen 800 is capped at 3 replies this hour"
+        bot._release(job)
+        # Backlog pass: only citizen posts 30 min - 24 h old, no freshness decay, one reply per citizen per 4 h.
+        cit(600, 1, 3 * 3600)      # a 3 h old post: dead for the fresh passes, fine for the backlog
+        assert bot.plan_reply(fresh_seconds=1800, citizens_only=True) is None or \
+            bot.plan_reply(fresh_seconds=1800, citizens_only=True)["target_author"] != 600
+        job = bot.plan_reply(citizens_only=True, backlog=True)
+        assert job is not None and job["target_author"] == 600, job and job["target_author"]
+        bot._release(job)
+        bot.db.x("UPDATE accounts SET last_targeted=? WHERE account_id=600", (now - 3600,))
+        job = bot.plan_reply(citizens_only=True, backlog=True)
+        assert job is None or job["target_author"] != 600, "backlog targets rest 4 h"
 
 
 if __name__ == "__main__":

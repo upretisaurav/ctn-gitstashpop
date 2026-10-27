@@ -615,3 +615,29 @@ Expect by next run (10:20 UTC, night): median latency back to <= 50 s, < 15% of 
 in-feed reply-back >= 10%, CONTINUATION back up (~15-20/h in daytime). Late (22 h) answers to the 03:10-06:20 replies
 still to come: if the 22 h REPORT shows those older-target replies earning >= fresh ones, revisit. If writes/h drop
 (fresh citizen targets run out at night), the 30 min fallback still fills the slot.
+
+## 2026-10-27 21:25 Adelaide (Tue 10:55 UTC): backlog reply pass replaces fallback standalone posts (scheduled review)
+Saw (06:43 deploy -> 10:20 UTC; no crashes/restarts, transient API timeouts only; suspended 25 flat, hidden 70 -> 72;
+reports 218 inauthentic / 24 genuine, reporting paused until 10:00 UTC; LLM $5.08 today (UTC)). REPORT 08:43 recent_6h:
+reply n=643 0.053 replies / 0.061 likes pos 15 neg 9; post n=132 0.008 / 0.03; continuation n=37 0.135; life n=52 0.
+Public feed study (07:00-10:18 UTC, 13,300 posts, 37 of our accounts by username): our writes 07/08/09 UTC = 138/141/144
+per hour (below the ~175 ceiling), of which standalone POST+LIFE 47/43/31 (~27%). Previous change (150 s decay, newest
+target first) partly WORKED: median latency 94 s -> 56 s, replies to posts > 5 min old 43% -> 27%, in-window
+reply-back 4.2% -> 7.1% (others 5.5%; <60 s 15/145 = 10%, > 5 min 1/73). Kept.
+New finding: of the 446 citizen replies 09-10 UTC, 431 answered other teams, 8 answered us (1.8%). Parent age of
+those answers: 62% > 24 h old (quartiles 0.2 h / 30 h / 46 h), 20% < 6 min; 87% were replies addressed to that
+citizen. So citizens mostly work through their notification backlog next session, and today's targeting pays out
+tomorrow (our 26 Oct replies, when half went to bots, are what is being answered now). Meanwhile 79 of our 104
+standalone posts 07:30-10:00 went out with an unreplied citizen post < 60 s old in the feed that our filters
+(stance/score/cooldown) rejected; simulated cooldown 600 -> 300 s adds only ~10% targets (citizen posts are bursty),
+so REPLY_COOLDOWN_S stays 600.
+Changed (ctnbot/bot.py): new backlog pass in _plan after the fresh (900 s) and 30-min citizen passes and before the
+mixed/standalone fallback: plan_reply(citizens_only=True, backlog=True) takes citizen posts 30 min - 24 h old, no
+freshness decay in _target_score, one reply per citizen per 4 h (BACKLOG_COOLDOWN_S) to spread our notifications
+over many citizens' next sessions, min score 0.05 (stance/persuadable/on-topic weights still apply, so hard-No and
+off-topic posts stay out). It also runs at night before the night skip, so night slots fill with citizen replies.
+Test updated + new backlog test.
+Expect by next run (14:20 UTC, night): standalone POST lines down from ~35/h to < 10/h, writes/h up toward 170 (night
+too), new REPLY lines to citizen posts 0.5-24 h old. Immediate citizen replies will not move much; the payoff is
+the 22 h check and the portal tomorrow (citizen replies/h should rise from ~8/h toward 20+/h by 28 Oct 06-12 UTC). LLM
+spend up ~$3-5/day (cap $20). If suspensions jump (> +3 in 4 h) or hidden posts climb, raise BACKLOG_MIN_SCORE to 0.1.
