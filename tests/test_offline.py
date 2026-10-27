@@ -272,6 +272,16 @@ def test_follow_ups_with_everyone_until_two_pushbacks():
         assert bot._plan() is None
         bot._last_night_post = time.time() - bot.NIGHT_POST_GAP - 1
         assert bot._plan() == {"kind": "post"}
+        # citizens first: fresh citizens, then older citizens, and only then another team's account
+        calls = []
+        bot.is_night = lambda: False
+        bot.plan_reply = lambda fresh_seconds=None, citizens_only=False: (
+            calls.append((fresh_seconds, citizens_only)) or ({"kind": "reply"} if not citizens_only else None))
+        share = bot.strategy._data.get("share_top_level")
+        bot.strategy._data["share_top_level"] = 0.0
+        assert bot._plan() == {"kind": "reply"}
+        assert calls == [(None, True), (1800, True), (None, False)], calls
+        bot.strategy._data["share_top_level"] = share
         for k, v in saved.items():
             setattr(bot, k, v)
         del bot.NIGHT_SKIP

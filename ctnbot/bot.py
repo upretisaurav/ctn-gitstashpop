@@ -524,6 +524,8 @@ class Bot:
             job["planned_at"] = time.time()
             self.inflight.append((self.drafter.submit(self._compose_safe, job), job))
 
+    CITIZEN_MIN_SCORE = 0.012     # _target_score adds 0.01; this only drops off-topic / hard-No / long-stale posts
+
     def is_night(self) -> bool:
         return time.gmtime().tm_hour in self.NIGHT_UTC
 
@@ -533,12 +535,13 @@ class Bot:
         job = (self.plan_continuation()
                or self.plan_boost()
                or (random.random() < share and self.plan_top_level())
-               or self.plan_reply())
+               or self.plan_reply(citizens_only=True))
         if job:
             return job
         # Nobody fresh to talk to. Citizens read their notifications next session, so a reply to a post up to
-        # 30 min old still lands; a standalone post at night mostly earns reports.
-        job = self.plan_reply(fresh_seconds=1800)
+        # 30 min old still lands; a standalone post at night mostly earns reports. A citizen, even an older post,
+        # beats any other team's account: 27 Oct public feed, 102 of our 213 replies went to rival bots (0 points).
+        job = self.plan_reply(fresh_seconds=1800, citizens_only=True) or self.plan_reply()
         if job:
             return job
         if night and (random.random() < self.NIGHT_SKIP
@@ -826,7 +829,7 @@ class Bot:
         return job
 
     # ---- 2. replies to fresh NPC posts -------------------------------------
-    def plan_reply(self, fresh_seconds: Optional[int] = None):
+    def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False):
         now = time.time()
         fresh_seconds = int(fresh_seconds or self.strategy["reply_fresh_seconds"])
         rows = self.db.all("""
@@ -844,6 +847,8 @@ class Bot:
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
                 and r["author_id"] not in self.busy_people]
+        if citizens_only:
+            rows = [r for r in rows if r["author_id"] <= NPC_ID_CUTOFF]
         if not rows:
             return None
         # Who started each thread? The accounts that earn the most citizen replies mostly reply inside threads the
@@ -861,7 +866,9 @@ class Bot:
             ra = root_author.get(r["root_id"])
             return ra is not None and ra <= NPC_ID_CUTOFF
         score, r = max(((self._target_score(r, now, cit_rooted(r)), r) for r in rows), key=lambda t: t[0])
-        if score <= 0.05:
+        # Any on-topic citizen is worth a write (only citizens score); the 0.05 bar was for weighed-down rival bots
+        # and older citizen posts (freshness decays over 150 s), which left the 30 min fallback almost unused.
+        if score <= (self.CITIZEN_MIN_SCORE if citizens_only else 0.05):
             return None
         concerns = json.loads(r["concerns"] or "[]") or ["other"]
         row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)

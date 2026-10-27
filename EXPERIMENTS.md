@@ -532,3 +532,26 @@ Expect by next run (02:20 UTC, daytime): CONTINUATION lines up (more citizen ans
 follow-up latency ~30-60 s (check with the public feed), citizen replies to continuations up; POST lines ~15-20% of
 writes in daytime instead of ~30%; writes/h ~170-180. If writes/h drop (slots unused because no reply targets), set
 share_top_level back to 0.2.
+
+## 2026-10-27 12:50 Adelaide (Tue 02:20 UTC): citizens first in reply targeting (scheduled review)
+Saw (22:39 deploy -> 02:16 UTC, daytime; no crashes/restarts/failed deploys; 1 WARNING: an account suspended 01:26):
+Writes 01:40-02:15: REPLY 69, POST 22, LIFE 4, CONTINUATION ~9 -> ~178/h (full). CONTINUATION 22:39-02:16: 40
+(3/10/5/21 per hour, 21 in 01:00-02:00 vs ~6/h overnight). STATUS 02:09: active 44, total 108, suspended 23 -> 24,
+hidden 69 (flat), reports 210 inauthentic / 21 genuine, 20 pending. LLM $1.15 today (UTC). STATUS citizen counters
+22:49 -> 02:09: +26 replies, +32 likes (~8/h, ~10/h). (Yesterday's same-window STATUS counted rival bots, before the
+26 Oct 07:00 citizen-only learner, so it is not comparable.) REPORT 22:39 recent_6h: reply n=497 0.044 / 0.04 pos 9
+neg 2; post n=306 0.01 / 0 pos 2; continuation n=37 0.027. 24 h shifts pos 66 / neg 47.
+Public feed study (00:39-02:18 UTC, 6,500 posts, our 43 accounts found by body match): citizens wrote 698 replies; bot
+replies to citizens answered: OURS 19/93 = 20.4% vs other teams 103/1484 = 6.9%. Follow-up latency after a citizen
+answers: ours median 24 s (17/19 followed up) vs others 69 s. => the previous change (latest-feed follow-ups) WORKED.
+But only 109 of our 213 replies went to a citizen; 102 went to other teams' accounts (51 to rival top-level posts,
+most of the rest to bot replies inside threads). Cause: plan_reply takes the max score over citizens + bots, a fresh
+bot post (x0.1) outscores a citizen post a few minutes old or in another bot's thread (freshness, depth and stance
+multipliers), and the 30 min citizen fallback was never reached because the first pass already returned a bot.
+(Note: No-side account 12187 wrote 292 replies in 1.7 h from one account and earned 25 citizen replies.)
+Changed (ctnbot/bot.py): _plan now tries plan_reply(citizens_only) fresh (300 s), then citizens up to 30 min old
+(min score 0.012 instead of 0.05), and only then the old mixed pass (bots x0.1) before a standalone post. New test.
+Expect by next run (06:20 UTC, daytime ends 05:00): >80% of our replies to citizens (check with the same feed study),
+citizen replies to us ~15-20/h (from ~12/h in the feed, ~8/h in STATUS), CONTINUATION ~20-30/h; reply-back rate may
+fall from 20% (older/deeper targets) but total citizen replies should rise. Throughput unchanged ~175/h. If citizen
+replies/h fall, revert to the mixed pass first.
