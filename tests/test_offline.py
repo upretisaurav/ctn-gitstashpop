@@ -320,7 +320,12 @@ def test_reply_targets_prefer_citizens_in_session_and_cap_per_citizen():
                 bot.db.x("INSERT OR REPLACE INTO posts(post_id, author_id, kind, body, created_at, depth) VALUES(?,?,?,?,?,?)",
                          (aid * 100 + i, aid, "reply", body, now - age - i * 60, 2))
         cit(700, 1, 30)            # one quiet citizen, brand-new post
-        cit(800, 8, 240)           # a citizen in session: 8 posts in the last 30 min, newest 4 min old
+        cit(900, 8, 240)           # a citizen in session whose newest post is already 4 min old
+        job = bot.plan_reply()
+        assert job is not None and job["target_author"] == 700, "a fresh post beats a 4-min-old one (reply-back ~1/3)"
+        bot._release(job)
+        bot.db.x("UPDATE accounts SET last_targeted=0 WHERE account_id=700")
+        cit(800, 8, 40)            # a citizen in session: 8 posts in the last 30 min, newest 40 s old
         job = bot.plan_reply()
         assert job is not None and job["target_author"] == 800, "in-session citizen should win over a quiet one"
         # Only the two newest posts of an author are candidates, and at most 3 replies per citizen per hour.
@@ -328,6 +333,7 @@ def test_reply_targets_prefer_citizens_in_session_and_cap_per_citizen():
             bot.db.x("INSERT INTO our_posts(post_id, account_id, kind, target_id, target_post, created_at) VALUES(?,?,?,?,?,?)",
                      (9200 + k, 1, "reply", 800, 80000 + k, now - 60))
         bot.db.x("UPDATE accounts SET last_targeted=0 WHERE account_id=800")
+        bot._release(job)
         job = bot.plan_reply()
         assert job is not None and job["target_author"] == 700, "citizen 800 is capped at 3 replies this hour"
 

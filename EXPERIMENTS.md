@@ -593,3 +593,25 @@ Expect by next run (04:20 / 08:20 UTC): POST+LIFE <= 10% of writes, REPLY lines 
 If writes/h fall below ~150 (no targets), raise reply_fresh_seconds is already at its bound: lower
 REPLY_COOLDOWN_S to 300 instead. Watch suspensions: 3 replies per citizen from different accounts is normal, from the
 same account it is a continuation, so no new ban exposure expected.
+
+## 2026-10-27 16:55 Adelaide (Tue 06:25 UTC): steep freshness decay again, freshest target sent first (scheduled review)
+Saw (03:22 deploy -> 06:20 UTC; no crashes/restarts; 1 suspension 03:27, now 25; transient poll_notifications network
+errors only): writes 04:00-06:00 REPLY 303 / POST 37 / LIFE 19 / CONTINUATION 15 (~165/h, POST+LIFE ~15%,
+CONTINUATION ~8/h vs 21/h at 01-02 UTC). STATUS 03:22 -> 06:13: citizen replies to us 1,991 -> 2,027 (~12.6/h), likes
+5,626 -> 5,651 (~9/h); hidden 70 flat; reports 218 inauthentic / 24 genuine (2 ruled genuine 04:17, reporting paused
+until 10:00 UTC); LLM $3.23 today (UTC). RATELIMIT limit=3 unchanged. REPORT 05:22 recent_6h: reply n=638 0.055 replies /
+0.06 likes pos 15 neg 2; post n=205 0.005 / 0.01; continuation n=59 0.186 / 0.169 pos 8.
+Public feed study (04:00-06:00 UTC, 9,500 posts, all 43 of our accounts matched by body): the 03:10 targeting WORKED
+on aim: 305 of 318 of our replies went to citizens (was 109/213). But reply-back collapsed: ours 11/263 = 4.2% (was
+20.4% at 00:39-02:18), others 4.7%. Our median latency (citizen post -> our reply) 94 s (was ~30 s); 112 of 263
+replies went to citizen posts > 5 min old and got 0 answers. All teams by latency: <30 s 11%, 30-60 s 8%, 1-2 min 6%,
+2-5 min 4%, 5-15 min 1%, >15 min 0%. Length and ending with '?' made little difference (4-6%). The best rival account
+(No side, 12907) sends ~150 replies/h from ONE account, median latency 48 s, ~210 chars, 299/333 to citizen replies
+mid-conversation: 8.7% reply-back, 36 citizen replies in 2 h vs our 16.
+Changed (ctnbot/bot.py): (1) _target_score freshness decay 400 s -> 150 s (session weight, 3/citizen/h, 10 min
+cooldown and the 15 min pool are kept; an older post only wins when nothing fresh is in the pool). (2) _send_next:
+among ready reply drafts, send the one with the newest target first (was oldest draft first). Test updated.
+Expect by next run (10:20 UTC, night): median latency back to <= 50 s, < 15% of our replies to posts > 5 min old,
+in-feed reply-back >= 10%, CONTINUATION back up (~15-20/h in daytime). Late (22 h) answers to the 03:10-06:20 replies
+still to come: if the 22 h REPORT shows those older-target replies earning >= fresh ones, revisit. If writes/h drop
+(fresh citizen targets run out at night), the 30 min fallback still fills the slot.

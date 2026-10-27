@@ -606,7 +606,10 @@ class Bot:
         self.ready = fresh
         if not self.ready:
             return
-        self.ready.sort(key=lambda j: (self.KIND_ORDER.get(j["kind"], 9), j["drafted_at"]))
+        # Within a kind, send the reply whose target is newest first: every second of target age costs reply-backs.
+        self.ready.sort(key=lambda j: (self.KIND_ORDER.get(j["kind"], 9),
+                                       -float((j.get("r") or {}).get("created_at") or 0) if j["kind"] == "reply" else 0,
+                                       j["drafted_at"]))
         job = self.ready.pop(0)
         try:
             row = self.db.one("SELECT * FROM our_accounts WHERE account_id=? AND status='active'",
@@ -944,7 +947,11 @@ class Bot:
         # they are reading notifications for, and plan_reply already keeps only the two newest per author.
         recent_n = int(r["recent_n"] or 0) if "recent_n" in r.keys() else 0
         session_w = 1.0 + 0.12 * min(recent_n, 10)
-        fresh = math.exp(-age / 400.0)
+        # 27 Oct 04:00-06:00 public feed (all teams): a citizen answers a reply sent <30 s after their post 11% of the
+        # time, 30-60 s 8%, 1-2 min 6%, 2-5 min 4%, 5-15 min 1%. With a 400 s decay 43% of our replies went to posts
+        # over 5 min old (0 answered) and our reply-back fell from 20% to 4%. Back to a steep decay: an older post
+        # only wins when nothing fresh is in the pool.
+        fresh = math.exp(-age / 150.0)
         # Citizens keep talking 4-8 deep in their own threads, so depth only counts against us in someone else's.
         depth_w = 1.0 if citizen_rooted else max(0.3, 0.6 - 0.1 * (r["depth"] or 0))
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
