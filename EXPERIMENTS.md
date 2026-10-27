@@ -677,3 +677,13 @@ Changed (ctnbot/bot.py): BACKLOG_COOLDOWN_S 4 h -> 2 h, BACKLOG_MAX_AGE_S 24 h -
 Expect by next run (18:20 UTC, night): standalone POST lines < 10/h in any hour 15-18 UTC except deliberate night
 skips; REPLY lines up accordingly; no slowdown of the planning loop (query still indexed). Check 22 h "citizens:"
 lines for replies sent 11-14 UTC (backlog) vs fresh ones. If suspensions climb (> +3 in 4 h), go back to 3 h.
+
+Follow-up 15:00 UTC: FALLBACK lines at 14:39/14:42 (night): "cit1800=score 0.010 (rows 13), cit900=score 0.010 (rows 3),
+backlog=score 0.041 (rows 50), mixed=score 0.028 (rows 117)". So the pools are NOT empty: the 30-min pass scores every
+row 0.010 (150 s decay zeroes anything older than ~6 min) and the backlog pass's best row (0.041) sits under the 0.05 bar
+(the leftovers after the 4 h cooldown are mostly stance -1 / off-topic / bot-thread posts).
+Changed (ctnbot/bot.py): BACKLOG_MIN_SCORE 0.05 -> 0.02; backlog pass excludes stance -2 citizens in SQL (replies to
+hard-No earned 0.147 replies/post but 3 negative vs 1 positive shift; an "away" change costs 80); the 30-min pass uses
+a 600 s decay instead of 150 s (its whole point is posts 5-30 min old).
+Expect by next run: FALLBACK lines rare, night POST+LIFE < 10% of writes, REPLY lines ~150/h at night too. Watch neg
+shifts in REPORT (24 h neg 27 vs pos 59 at 13:23): if neg rises above ~half of pos, raise BACKLOG_MIN_SCORE to 0.03.

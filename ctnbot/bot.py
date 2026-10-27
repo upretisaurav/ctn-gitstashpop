@@ -865,7 +865,11 @@ class Bot:
     BACKLOG_MIN_AGE_S = 1800
     BACKLOG_MAX_AGE_S = 36 * 3600
     BACKLOG_COOLDOWN_S = 2 * 3600
-    BACKLOG_MIN_SCORE = 0.05
+    # FALLBACK lines (27 Oct 14:39 UTC, night): the backlog pass had 45-50 rows but its best score was 0.041, and the
+    # 30-min pass scored every row 0.010 (the 150 s decay zeroes anything older than ~6 min), so every slot went to a
+    # standalone post (~0.01 citizen replies each). Hard-No citizens stay out of the backlog (replies to them shift
+    # minds away, -80); anyone else beats a standalone post.
+    BACKLOG_MIN_SCORE = 0.02
 
     def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False, backlog: bool = False):
         now = time.time()
@@ -884,12 +888,14 @@ class Bot:
               AND a.npc_score >= 0.7 AND COALESCE(a.moved_until,0) < ? AND COALESCE(a.last_targeted,0) < ?
               AND (p.depth IS NULL OR p.depth < ?)
               AND p.author_id NOT IN (SELECT account_id FROM our_accounts) AND p.author_id <= ?
+              AND COALESCE(a.stance, 0) > ?
               AND p.post_id NOT IN (SELECT COALESCE(target_post,0) FROM our_posts)
               AND (SELECT COUNT(*) FROM our_posts o WHERE o.target_id = p.author_id AND o.kind = 'reply'
                    AND o.created_at > ?) < ?
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
                            (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF if citizens_only else 1 << 62,
+                            -2 if backlog else -9,
                             now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
@@ -922,7 +928,8 @@ class Bot:
                 return True
             ra = root_author.get(r["root_id"])
             return ra is not None and ra <= NPC_ID_CUTOFF
-        score, r = max(((self._target_score(r, now, cit_rooted(r), backlog=backlog), r) for r in rows),
+        decay = 600.0 if fresh_seconds >= 1800 else 150.0      # the 30-min pass exists for older posts
+        score, r = max(((self._target_score(r, now, cit_rooted(r), backlog=backlog, decay=decay), r) for r in rows),
                        key=lambda t: t[0])
         # Any on-topic citizen is worth a write (only citizens score); the 0.05 bar was for weighed-down rival bots
         # and older citizen posts (freshness decays over 150 s), which left the 30 min fallback almost unused.
@@ -967,7 +974,8 @@ class Bot:
         job.update(text=text, model=model, mentions=[a for a, _ in extra])
         return job
 
-    def _target_score(self, r, now: float, citizen_rooted: bool = True, backlog: bool = False) -> float:
+    def _target_score(self, r, now: float, citizen_rooted: bool = True, backlog: bool = False,
+                      decay: float = 150.0) -> float:
         sw = self.strategy["stance_weights"]
         stance_w = float(sw.get(str(r["stance"]), 0.7)) if r["stance"] is not None else 0.7
         concerns = json.loads(r["concerns"] or "[]")
@@ -985,7 +993,7 @@ class Bot:
         # time, 30-60 s 8%, 1-2 min 6%, 2-5 min 4%, 5-15 min 1%. With a 400 s decay 43% of our replies went to posts
         # over 5 min old (0 answered) and our reply-back fell from 20% to 4%. Back to a steep decay: an older post
         # only wins when nothing fresh is in the pool.
-        fresh = 1.0 if backlog else math.exp(-age / 150.0)     # backlog: answered next session, age hardly matters
+        fresh = 1.0 if backlog else math.exp(-age / decay)     # backlog: answered next session, age hardly matters
         # Citizens keep talking 4-8 deep in their own threads, so depth only counts against us in someone else's.
         depth_w = 1.0 if citizen_rooted else max(0.3, 0.6 - 0.1 * (r["depth"] or 0))
         trending = 1.15 if r["author_id"] in set(self.db.get("trending_authors", []) or []) else 1.0
