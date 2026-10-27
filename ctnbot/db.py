@@ -87,6 +87,9 @@ CREATE TABLE IF NOT EXISTS our_posts (
     checked_at   REAL DEFAULT 0,
     status       TEXT DEFAULT 'visible'
 );
+CREATE INDEX IF NOT EXISTS our_posts_target ON our_posts(target_id, created_at);
+CREATE INDEX IF NOT EXISTS our_posts_target_post ON our_posts(target_post);
+CREATE INDEX IF NOT EXISTS posts_author_created ON posts(author_id, created_at);
 
 CREATE TABLE IF NOT EXISTS reports (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,

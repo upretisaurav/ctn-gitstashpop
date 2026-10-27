@@ -873,13 +873,14 @@ class Bot:
             WHERE p.created_at > ? AND p.created_at <= ? AND p.kind IN ('post','reply') AND p.body IS NOT NULL AND length(p.body) > 25
               AND a.npc_score >= 0.7 AND COALESCE(a.moved_until,0) < ? AND COALESCE(a.last_targeted,0) < ?
               AND (p.depth IS NULL OR p.depth < ?)
-              AND p.author_id NOT IN (SELECT account_id FROM our_accounts)
+              AND p.author_id NOT IN (SELECT account_id FROM our_accounts) AND p.author_id <= ?
               AND p.post_id NOT IN (SELECT COALESCE(target_post,0) FROM our_posts)
               AND (SELECT COUNT(*) FROM our_posts o WHERE o.target_id = p.author_id AND o.kind = 'reply'
                    AND o.created_at > ?) < ?
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
                            (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
-                            self.cfg.max_thread_depth, now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
+                            self.cfg.max_thread_depth, NPC_ID_CUTOFF if citizens_only else 1 << 62,
+                            now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
                 and r["author_id"] not in self.busy_people]

@@ -641,3 +641,8 @@ Expect by next run (14:20 UTC, night): standalone POST lines down from ~35/h to 
 too), new REPLY lines to citizen posts 0.5-24 h old. Immediate citizen replies will not move much; the payoff is
 the 22 h check and the portal tomorrow (citizen replies/h should rise from ~8/h toward 20+/h by 28 Oct 06-12 UTC). LLM
 spend up ~$3-5/day (cap $20). If suspensions jump (> +3 in 4 h) or hidden posts climb, raise BACKLOG_MIN_SCORE to 0.1.
+Follow-up 11:25 UTC: the first deploy (81f8883) stalled the bot from 11:00 (no writes for 20+ min): the 24 h backlog
+query ran the per-row "replies to this citizen in the last hour" subquery over an unindexed our_posts table for every
+post of the day (benchmark at 100k posts / 8k our_posts: 20 s per plan). Fixed: indexes our_posts(target_id,
+created_at), our_posts(target_post), posts(author_id, created_at), and citizens filtered in SQL for citizens-only
+passes (same benchmark: 0.2 s backlog, 0.01 s fresh passes, all passes faster than before).
