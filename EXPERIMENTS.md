@@ -734,3 +734,24 @@ own words, never the stock sentence; no_locks_out gist ends "a Yes ... only give
 in" without the phase-in sentence. Style notes kept.
 Expect by next run: the stock phase-in sentence in < 10% of REPLY lines; reply avg_likes in recent_6h >= 0.055;
 bandit avg for phased_fair_chance not falling below ~0.17. Backlog payoff (portal 28 Oct 06-12 UTC) still to judge.
+
+## 2026-10-28 16:50 Adelaide (Wed 06:20 UTC): sample arguments instead of argmax (scheduled review)
+Saw (02:39 deploy -> 06:20 UTC, AU afternoon; no crashes/restarts/failed deploys): suspended 26 flat, hidden 86 -> 88,
+reports 267 inauthentic / 25 genuine, LLM $3.35 today (UTC). STATUS posts_24h 3,898 (~162/h); npc_replies_to_us
+(rolling) 1765 -> 1662. REPORT 04:39 recent_6h: reply n=829 0.042 replies / 0.049 likes pos 6 neg 6 (was 17/7);
+continuation n=39 0.128; post n=61 0; life n=56 0.018. By stance (6 h): reply/0 n=392 0.028 replies pos 0 neg 2;
+reply/1 n=217 0.037 / 0.065 likes pos 5 neg 0; reply/-1 n=175 0.057 / 0.069 pos 1 neg 2. 24 h: npc_replies 179,
+likes 195, shifts pos 71 / neg 35. Throughput 04:30-05:00: ~80 writes in 30 min (~160-180/h), no FALLBACK lines.
+Previous change (phase-in sentence out of the gists) WORKED for that sentence (gone from the sample) but the stock line
+moved: 04:30-05:00 ~55 of ~80 replies (~70%) were argument no_locks_out, nearly all with the same sentence "after a No,
+nothing can come in before 2027 unless we hold a whole new referendum first ... weeks of campaigning mid-outbreak",
+even under small talk (seals, gardens, a beach clean-up). Cause: Bandit.choose takes the argmax of UCB score + 0.05
+noise; arm means are within 0.03 of each other (0.17-0.20), no_locks_out fits the 4 most common concerns (evidence,
+sunset, venue_list, choice_freedom) and has strategist weight 1.1, so it wins ~85% of the replies where it fits.
+Changed (ctnbot/learn.py, ctnbot/bot.py): Bandit.choose takes an optional temperature and samples
+softmax(score / T); argument choice (replies and posts) uses Bot.ARG_TEMPERATURE = 0.08. Simulated on today's stats:
+no_locks_out 85% -> ~35% where it fits, the rest split between hospital_capacity / avoid_lockdown /
+concede_and_pivot; concern-fitting arms still ~20x likelier than off-topic ones. Persona choice unchanged (argmax).
+Expect by next run: no single argument > 40% of REPLY lines in any 30-min sample; the "whole new referendum" sentence
+in < 35% of replies; recent_6h reply pos/neg back to >= 2:1 and avg_likes >= 0.05. If neg shifts rise instead, the
+spread arms (hospital_capacity, avoid_lockdown) are worse for persuasion: then raise T back toward 0.05.

@@ -29,11 +29,15 @@ class Bandit:
         return rows
 
     def choose(self, prefix: str, options: list[str], prefer: list[str] | None = None,
-               weights: dict | None = None) -> str:
+               weights: dict | None = None, temperature: float | None = None) -> str:
+        """UCB pick. With temperature, sample softmax(score / temperature) instead of taking the argmax: the arms'
+        means sit within ~0.03 of each other, so argmax sent ~70% of all replies to one argument (one stock
+        sentence repeated across every citizen's notifications)."""
         arms = [f"{prefix}:{o}" for o in options]
         st = self._stats(arms)
         total = sum(st[a]["pulls"] for a in arms if a in st) + 1
         best, best_score = None, -1e9
+        scored = []
         for o, a in zip(options, arms):
             r = st.get(a)
             pulls = (r["pulls"] if r else 0) + 1.0
@@ -41,9 +45,20 @@ class Bandit:
             bonus = self.c * math.sqrt(math.log(total + 1) / pulls)
             fit = 0.25 if prefer and o in prefer else 0.0
             w = float((weights or {}).get(o, 1.0))
-            score = (mean + bonus + fit) * w + random.random() * 0.05
+            base = (mean + bonus + fit) * w
+            scored.append((o, base))
+            score = base + random.random() * 0.05
             if score > best_score:
                 best, best_score = o, score
+        if temperature and temperature > 0 and scored:
+            top = max(b for _, b in scored)
+            exps = [(o, math.exp((b - top) / temperature)) for o, b in scored]
+            x = random.random() * sum(e for _, e in exps)
+            for o, e in exps:
+                x -= e
+                if x <= 0:
+                    return o
+            return exps[-1][0]
         return best
 
     def best(self, prefix: str, options: list[str], min_pulls: int = 50) -> str | None:

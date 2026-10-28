@@ -870,6 +870,9 @@ class Bot:
     # standalone post (~0.01 citizen replies each). Hard-No citizens stay out of the backlog (replies to them shift
     # minds away, -80); anyone else beats a standalone post.
     BACKLOG_MIN_SCORE = 0.02
+    # Argument choice samples softmax(UCB score / T) among arms instead of argmax (0.08: concern-fitting arms
+    # ~20x likelier than non-fitting ones; near-equal fitting arms share the slots: no_locks_out ~85% -> ~35% where it fits).
+    ARG_TEMPERATURE = 0.08
 
     def plan_reply(self, fresh_seconds: Optional[int] = None, citizens_only: bool = False, backlog: bool = False):
         now = time.time()
@@ -945,7 +948,7 @@ class Bot:
         if self._life_post_due(row):
             return {"kind": "life", "row": dict(row)}
         arg = self.bandit.choose("arg", list(ARGUMENTS), prefer=arguments_for(concerns),
-                                 weights=self.strategy["argument_weights"])
+                                 weights=self.strategy["argument_weights"], temperature=self.ARG_TEMPERATURE)
         smart = (random.random() < self.strategy["smart_all_writing"]) or (
             (r["stance"] in (-1, 0, None)) and
             (r["persuadable"] or 0.5) >= self.strategy["smart_reply_min_persuadable"])
@@ -1037,7 +1040,7 @@ class Bot:
         # Standalone posts make the positive case; conceding the other side's points is for replies only.
         options = [a for a in ARGUMENTS if a != "concede_and_pivot"]
         arg = self.bandit.choose("arg", options, prefer=[a for a in arguments_for([concern]) if a in options],
-                                 weights=self.strategy["argument_weights"])
+                                 weights=self.strategy["argument_weights"], temperature=self.ARG_TEMPERATURE)
         relevant = [a for a in self.news
                     if ON_TOPIC.search(f"{a.get('title', '')} {a.get('summary') or a.get('excerpt') or ''}")]
         news = random.choice(relevant) if relevant and random.random() < 0.5 else None
