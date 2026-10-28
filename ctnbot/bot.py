@@ -870,6 +870,9 @@ class Bot:
     # standalone post (~0.01 citizen replies each). Hard-No citizens stay out of the backlog (replies to them shift
     # minds away, -80); anyone else beats a standalone post.
     BACKLOG_MIN_SCORE = 0.02
+    # HARD_NO: 28 Oct REPORT windows, replies to stance -2 citizens: n~30 per 6 h, ~0.12 citizen replies each but
+    # pos 0 / neg 3-4 every window (~-8 points per reply after the 15/5 earned). Fresh passes now skip them like the
+    # backlog pass already did; a -2 citizen who answers us still gets a CONTINUATION (own path, pos 1 neg 0).
     # Argument choice samples softmax(UCB score / T) among arms instead of argmax (0.08: concern-fitting arms
     # ~20x likelier than non-fitting ones; near-equal fitting arms share the slots: no_locks_out ~85% -> ~35% where it fits).
     ARG_TEMPERATURE = 0.08
@@ -898,7 +901,7 @@ class Bot:
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
                            (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF if citizens_only else 1 << 62,
-                            -2 if backlog else -9,
+                            -2,          # hard-No (-2) out of every reply pass, see HARD_NO note above
                             now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts

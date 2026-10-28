@@ -792,3 +792,22 @@ Previous change (stance weights -1 0.15, +1 1.0): too early to judge; the 12:39 
 direction still looks right (reply/1 best replies+likes and 6:1 pos/neg; reply/-1 2:6). Kept.
 Changed: nothing, so the 16:39 and 20:39 REPORTs measure the stance change cleanly in AU daytime.
 Expect by next run: reply/-1 n in recent_6h < 120, reply/1 n > 260; reply neg <= 4.
+
+## 2026-10-29 04:50 Adelaide (Wed 18:20 UTC): hard-No (-2) citizens out of the fresh reply passes (scheduled review)
+Saw (14:56 deploy -> 18:15 UTC, AU night; no crashes/restarts/failed deploys; Legit Social read/SSL timeouts 15:04-15:48
+then quiet): suspended 28 flat, hidden 92 -> 96, reports 277 inauthentic / 27 genuine (24 h: 29 / 3), LLM $9.42 today
+(UTC). STATUS posts_24h 4,169. Writes 18:03-18:10: 15 REPLY, 2 CONTINUATION, 1 POST, 2 LIFE (~180/h), POST+LIFE ~15% in
+that small sample. REPORT 16:56 recent_6h (10:56-16:56, all post-stance-change): reply n=794 0.031 replies / 0.039 likes
+pos 9 neg 9; continuation n=57 0.193; by stance reply/0 n=340 0.035/0.053 pos 7 neg 1; reply/1 n=211 0.024/0.019 pos 2
+neg 2; reply/-1 n=202 0.025/0.03 pos 0 neg 3; reply/-2 n=28 0.107 pos 0 neg 3. Same hours yesterday (REPORT 17:01 27 Oct):
+reply n=609 0.056 / 0.062 pos 14 neg 5, so the reply-back rate keeps sliding (0.056 -> 0.044 -> 0.042 -> 0.031).
+24 h: npc_replies 199, likes 194, shifts pos 77 / neg 33.
+Previous change (stance weights -1 0.15, +1 1.0) DID NOT move the mix: reply/-1 n 195 -> 202, reply/1 234 -> 211.
+_target_score is dominated by freshness (exp(-age/150 s)), so stance weights only break near-ties; kept (harmless).
+Changed (ctnbot/bot.py plan_reply): stance -2 citizens are excluded from every reply pass (the backlog pass already did
+this). Every 28 Oct window had reply/-2 pos 0 / neg 3-4 for ~30 replies (~-8 points per reply even after the 15/5
+earned). CONTINUATIONs to a -2 citizen who answers us are a separate path and unchanged.
+Expect by next run: reply/-2 n ~0 in the next fully post-deploy window; reply neg <= 6 with pos >= 9; throughput
+unchanged (~5 writes/h moved to 0/+1 citizens). If the reply-back rate keeps falling in AU daytime (UTC 22-05) vs
+yesterday, look at saturation (same citizens replied to 3x/h) and the "whole new referendum" line (back in ~40% of
+replies at 18:03-18:10 and in several worst_posts).
