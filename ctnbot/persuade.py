@@ -161,7 +161,11 @@ class Writer:
         return self.clean(text), model
 
     def life_post(self, *, persona_key: str, display_name: str) -> tuple[str, str]:
-        topic = random.choice(LIFE_TOPICS)
+        # 28 Oct: 4 accounts posted "the price of a flat white" and 4 "a good fish market haul" within 2 h; identical
+        # small talk across accounts reads as coordinated. Don't reuse any of the last 10 topics.
+        recent = getattr(self, "_recent_life_topics", [])
+        topic = random.choice([t for t in LIFE_TOPICS if t not in recent] or LIFE_TOPICS)
+        self._recent_life_topics = (recent + [topic])[-10:]
         user = (f"WRITE_POST\n{persona_card(persona_key, display_name)}\n\nWrite a casual everyday post (under 180 "
                 f"characters) about {topic}. Do NOT mention the referendum, vaccines or politics. Output only the post.")
         text, model = self.llm.complete(self.system, user, smart=False, max_tokens=100)
