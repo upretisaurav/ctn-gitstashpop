@@ -811,3 +811,23 @@ Expect by next run: reply/-2 n ~0 in the next fully post-deploy window; reply ne
 unchanged (~5 writes/h moved to 0/+1 citizens). If the reply-back rate keeps falling in AU daytime (UTC 22-05) vs
 yesterday, look at saturation (same citizens replied to 3x/h) and the "whole new referendum" line (back in ~40% of
 replies at 18:03-18:10 and in several worst_posts).
+
+## 2026-10-29 08:45 Adelaide (Wed 22:15 UTC): leaning-No (-1) citizens out of the citizen + backlog reply passes
+Saw (18:35 deploy -> 22:15 UTC; no crashes/restarts/failed deploys): suspended 28 flat, hidden 96 -> 107 (8 "gone/hidden"
+warnings 18:41-19:24, all on 2-day-old posts 383xxx-386xxx), reports 291 inauthentic / 29 genuine (two more ruled
+genuine 18:11 and 20:09; reporting blocked until 02:09 UTC), LLM $11.59 today (UTC). STATUS posts_24h 4,124.
+Writes 22:09:47-22:16:12: 15 REPLY, 3 CONTINUATION, 1 POST, 1 LIFE (~185/h, POST+LIFE 10%).
+REPORT 20:35 recent_6h (14:35-20:35): reply n=712 0.055 replies / 0.055 likes pos 23 neg 9 (up from 0.031 / pos 9 neg 9
+at 16:56); continuation n=79 0.152; post n=79 0.025 / 0.076. By stance: reply/0 n=306 0.046/0.065 pos 13 neg 0;
+reply/1 n=199 0.065/0.025 pos 8 neg 3; reply/-1 n=187 0.048/0.053 pos 1 neg 4; reply/-2 n=14 (pre-deploy part).
+24 h: npc_replies 205, likes 200, shifts pos 81 / neg 38.
+Previous change (-2 out of fresh passes): reply/-2 n 28 -> 14 in a window only 2 of 6 h post-deploy; reply pos/neg
+23:9 and reply-back 0.055 are the best since 27 Oct. Kept; next REPORT should show reply/-2 ~0.
+Points per reply by stance (15/reply, 5/like, +-80/shift): 0 ~+4.4, +1 ~+3.1, -1 ~-0.3. -1 has been net-negative in
+every window (3/4, 2/6, 0/3, 1/4, 1/4) and still takes ~26% of replies.
+Changed (ctnbot/bot.py plan_reply): stance -1 citizens are skipped in the two citizen passes and the backlog pass;
+only the last-resort mixed pass (score bar 0.05) can still pick a very fresh -1 post. A standalone post (~0.75/post)
+or a backlog reply to a 0/+1 citizen beats a -1 reply. CONTINUATIONs to -1 citizens who answer us are unchanged.
+Expect by next run: reply/-1 n < 60 in a post-deploy 6 h window; reply neg <= 5 with pos >= 15; more backlog replies;
+POST share may rise to ~12-15% in daytime. If citizen replies/h (24 h npc_replies) fall > 15% or POST+LIFE > 20%,
+revert to -2 for the citizen passes.

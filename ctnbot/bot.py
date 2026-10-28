@@ -873,6 +873,11 @@ class Bot:
     # HARD_NO: 28 Oct REPORT windows, replies to stance -2 citizens: n~30 per 6 h, ~0.12 citizen replies each but
     # pos 0 / neg 3-4 every window (~-8 points per reply after the 15/5 earned). Fresh passes now skip them like the
     # backlog pass already did; a -2 citizen who answers us still gets a CONTINUATION (own path, pos 1 neg 0).
+    # LEAN_NO: 29 Oct 20:35 REPORT, reply/-1 n=187: 0.048 citizen replies, 0.053 likes, pos 1 / neg 4; every 28 Oct
+    # window was net-negative (3/4, 2/6, 0/3, 1/4), ~-0.1 points per reply all in, while reply/0 earns ~4.4 and
+    # reply/1 ~3.1. Stance weight 0.15 did not move the mix (pool scarcity, not ranking), so the citizen and backlog
+    # passes now skip -1 outright: any 0/+1 citizen, even a backlog one, gets the slot first. The mixed pass still
+    # allows -1 (score bar 0.05), so a very fresh -1 post can take a slot that would otherwise be a standalone post.
     # Argument choice samples softmax(UCB score / T) among arms instead of argmax (0.08: concern-fitting arms
     # ~20x likelier than non-fitting ones; near-equal fitting arms share the slots: no_locks_out ~85% -> ~35% where it fits).
     ARG_TEMPERATURE = 0.08
@@ -901,7 +906,8 @@ class Bot:
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
                            (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF if citizens_only else 1 << 62,
-                            -2,          # hard-No (-2) out of every reply pass, see HARD_NO note above
+                            # hard-No (-2) out of every pass; leaning-No (-1) only in the last-resort mixed pass
+                            -2 if (not citizens_only and not backlog) else -1,   # see LEAN_NO note above
                             now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts
