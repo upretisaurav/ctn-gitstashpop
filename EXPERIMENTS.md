@@ -777,3 +777,18 @@ LIFE posts never reuse any of the last 10 topics: 4 accounts posted "flat white 
 Expect by next run: reply/-1 share of replies < 15%, reply/1 n up; recent_6h reply neg <= 3 with pos >= 10; reply
 avg_replies may dip ~0.005 (No-leaners answer more), likes/post up. If citizen replies/h fall > 15% vs the same hours
 yesterday, set -1 back to 0.3.
+
+## 2026-10-29 01:05 Adelaide (Wed 14:35 UTC): no change; Legit Social timeouts (scheduled review)
+Saw (10:39 deploy -> 14:38 UTC, AU night; no crashes/restarts/failed deploys): suspended 26 -> 28 (@ArSh__24 13:13,
+@TheRealHemiFaleolo 13:17), hidden 91 -> 92, reports 277 inauthentic / 27 genuine (reporting blocked until 14:56 UTC),
+RATELIMIT limit=3 unchanged, LLM $7.56 today (UTC). STATUS posts_24h 4,141; npc_replies_to_us (rolling) 1662 -> 1575.
+Since ~14:00 UTC the game server is flaky: dozens of "read operation timed out" / SSL handshake timeouts on
+poll_notifications/poll_latest/write_slot (server side, every task; nothing to fix in the bot).
+Writes 14:00-14:38: 84 (70 REPLY, 8 CONTINUATION, 5 LIFE, 1 POST, ~133/h; night skips + timeouts); POST+LIFE 7%.
+REPORT 12:39 recent_6h: reply n=800 0.041 / 0.050 pos 11 neg 9; continuation n=83 0.145 / 0.108; by stance reply/0
+n=316 0.025 pos 3 neg 0; reply/1 n=234 0.060 / 0.073 pos 6 neg 1; reply/-1 n=194 0.046 pos 2 neg 6. 24 h:
+npc_replies 186, likes 198, shifts pos 74 / neg 29.
+Previous change (stance weights -1 0.15, +1 1.0): too early to judge; the 12:39 window is 4 of 6 h pre-change. The
+direction still looks right (reply/1 best replies+likes and 6:1 pos/neg; reply/-1 2:6). Kept.
+Changed: nothing, so the 16:39 and 20:39 REPORTs measure the stance change cleanly in AU daytime.
+Expect by next run: reply/-1 n in recent_6h < 120, reply/1 n > 260; reply neg <= 4.
