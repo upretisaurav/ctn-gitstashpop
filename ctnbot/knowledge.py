@@ -97,16 +97,19 @@ CONCERNS = {
 # Arguments the bot can lead with. Each maps to the concerns it answers best.
 ARGUMENTS = {
     "phased_fair_chance": {
-        "gist": "Nothing starts until everyone eligible has had a fair chance to get the free jab; it is phased in, "
-                "with medical exemptions and under-12s exempt.",
+        "gist": "Pick the ONE fact that fits their situation and tie it to their own example (their kids, their "
+                "job, their island, their worry about being shut out): the jab is free; under-12s are exempt; "
+                "medical exemptions exist; and checks can only be phased in after everyone eligible has been offered "
+                "it. Say it in your own words. Most of our replies already use the stock line 'nothing starts/kicks "
+                "in until everyone eligible has had a fair chance at the free jab', so never write that sentence.",
         "for": ["supply_access", "two_tier", "jobs_income", "outer_islands", "kids_school", "enforcement_burden"],
     },
     "no_locks_out": {
         "gist": "Be exact (citizens check the ballot wording): after a No, no access rule can come in before the "
                 "2027 election unless the country holds a whole new referendum first, even if H2D2 is spreading. "
                 "Name that second-referendum route yourself, then say why it's too slow: weeks of campaigning and "
-                "a national vote in the middle of an outbreak. A Yes switches nothing on today; it only lets the "
-                "government phase it in once everyone has had a fair chance at the free jab. Never claim a No "
+                "a national vote in the middle of an outbreak. A Yes switches nothing on today; it only gives the "
+                "government the option to phase it in. Never claim a No "
                 "makes it impossible or 'locks it away' full stop.",
         "for": ["evidence", "sunset", "venue_list", "choice_freedom"],
     },

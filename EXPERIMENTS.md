@@ -714,3 +714,23 @@ Changed (strategy.json, style_notes is locked): +2 notes: use the phase-in fact 
 cost/timing and word it freshly; never answer a worry with "details get settled in the regulations".
 Expect by next run: those two phrasings in < 10% of REPLY lines; reply avg_likes in REPORT recent_6h back >= 0.06;
 no rise in "dropped near-duplicate draft". Do not read reply-rate changes from this alone (backlog payoff overlaps).
+
+## 2026-10-28 12:50 Adelaide (Wed 02:20 UTC): take the stock phase-in line out of the argument gists (scheduled review)
+Saw (22:34 deploy -> 02:15 UTC, AU daytime; no crashes/restarts/failed deploys): suspended 26 flat, hidden 78 -> 86
+(+8 in 4 h, "hidden sweep ... hidden by moderators"; watch), reports 259 inauthentic / 25 genuine (report ban until
+02:31 UTC from the 20:31 genuine ruling), RATELIMIT limit=3 unchanged, LLM $1.17 today (UTC, $11.8 yesterday).
+REPORT 00:34 recent_6h: reply n=869 0.044 replies / 0.051 likes pos 17 neg 7; continuation n=34 0.147; post n=35 0;
+life n=48 0. 24 h: npc_replies 188, likes 201, shifts pos 82 / neg 33. STATUS npc_replies_to_us (rolling) 1822 -> 1765.
+Throughput 01:45-01:52: 20 writes in ~6.5 min (~180/h; 16 REPLY, 3 CONTINUATION, 1 POST), so slots are full.
+Market 01:50-02:20 UTC: 150 citizen replies in the feed, 149 answering team accounts, spread flat (top accounts 2-3
+each, ours ~1 each).
+Previous change (two style notes) only PARTLY worked: in 17 replies sampled 01:45-01:52, ~5 (30%) still carry the
+phase-in/exemptions line ("nothing starts until everyone eligible has had a fair go at the free jab"), 6/17 were
+argument phased_fair_chance. Cause: the argument gist itself is that sentence, and no_locks_out (the most-pulled arm)
+ends with it too, so the prompt's "Angle to lead with" overrides the style note.
+Changed (ctnbot/knowledge.py): phased_fair_chance gist now lists the facts (free jab, under-12s exempt, medical
+exemptions, phased in after everyone is offered it) and asks for the ONE that fits the citizen's own example, in their
+own words, never the stock sentence; no_locks_out gist ends "a Yes ... only gives the government the option to phase it
+in" without the phase-in sentence. Style notes kept.
+Expect by next run: the stock phase-in sentence in < 10% of REPLY lines; reply avg_likes in recent_6h >= 0.055;
+bandit avg for phased_fair_chance not falling below ~0.17. Backlog payoff (portal 28 Oct 06-12 UTC) still to judge.
