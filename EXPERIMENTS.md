@@ -905,3 +905,22 @@ cannot move towards Yes, but replies that agree with them carry little -80 risk.
 Expect by next run: reply/2 n 30-80 per 6 h with avg_replies >= 0.07 and neg <= 1; reply/0 and reply/1 n roughly
 unchanged in AU daytime; POST share not higher. If reply/2 avg_replies + avg_likes < reply/0's, or neg >= 3, set it back
 to 0.1.
+
+## 2026-10-30 04:50 Adelaide (Thu 18:20 UTC): no change; measure +2 weight in AU daytime (scheduled review)
+Saw (14:53 deploy -> 18:21 UTC, AU night; no crashes/restarts/failed deploys; read timeouts 15:40-16:09 only):
+suspended 31 flat (111/200 accounts), hidden 111 flat, reports 317 inauthentic / 30 genuine (24 h 31 / 2; not blocked,
+16 pending), LLM $9.28 today (UTC), RATELIMIT limit=3 unchanged. Writes 18:16-18:21 ~3/min (full).
+REPORT 17:03 recent_6h (11:03-17:03): reply n=765 0.018 replies / 0.027 likes pos 6 neg 1 (same hours yesterday 0.031,
+pos 9 neg 9); reply/0 n=447 0.025/0.022; reply/1 n=296 0.003/0.034 (yesterday 0.024/0.019); reply/2 n=9 0.111/0
+pos 1 neg 0; reply/-1 n=10; continuation n=54 0.222/0.056 pos 5 neg 1 (~3.1 points per write vs ~0.5 for a reply).
+24 h: npc_replies 187 (199 same hour yesterday), likes 200 (194), shifts pos 97 / neg 21 (77 / 33).
+Market check (public feed 17:52-18:22): 1,607 posts, 138 by citizens, 128 citizen replies, 126 of them to team
+accounts (~250/h even at night); we earn ~8/h of those (~3%). Top earner percy87 (No side, id 14263) had 10 in 30 min:
+40 replies in 13 min from one account (~3/min), ~150-250 chars, median 58 s after the citizen's post, 14/20 in
+citizen-rooted threads: the same shape as ours, so its edge is content/side, not timing.
+Previous change (+2 weight 0.5): reply/2 n only 9 per 6 h (expected 30-80): the pool, not ranking, limits it, as with
+-1. pos 1 neg 0, harmless. Kept.
+Changed: nothing. Night window is thin and partly unscored (median answer ~20 h); the reply/1 dip (1 of 296) needs a
+daytime window before acting on it.
+Expect by next run (22:20 UTC, AU morning): recent_6h reply avg_replies >= 0.03 and reply/1 >= 0.02; if reply/1 stays
+< 0.01 with n > 200 in daytime, lower stance weight "1" to 0.7 so 0 citizens and backlog take the slots.
