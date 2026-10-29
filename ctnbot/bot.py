@@ -885,6 +885,11 @@ class Bot:
     # reply/1 ~3.1. Stance weight 0.15 did not move the mix (pool scarcity, not ranking), so the citizen and backlog
     # passes now skip -1 outright: any 0/+1 citizen, even a backlog one, gets the slot first. The mixed pass still
     # allows -1 (score bar 0.05), so a very fresh -1 post can take a slot that would otherwise be a standalone post.
+    # LEAN_NO_BACK (30 Oct 22:20 UTC): the -1 exclusion relied on our judge's neg shifts (~-80 each), but the portal
+    # activity log shows our points are almost all citizen replies and likes, with almost no change-of-mind events, so
+    # judged shifts are not real points. -1 citizens answered most often (0.048-0.067 replies per reply vs ~0.03 for
+    # 0/+1), and since they were excluded the 6 h reply-back fell 0.055 -> 0.027 and 24 h citizen replies 205 -> 173 at
+    # the same hour. So -1 is back in every pass, ranked below 0/+1 by stance weight.
     # Argument choice samples softmax(UCB score / T) among arms instead of argmax (0.08: concern-fitting arms
     # ~20x likelier than non-fitting ones; near-equal fitting arms share the slots: no_locks_out ~85% -> ~35% where it fits).
     ARG_TEMPERATURE = 0.08
@@ -913,8 +918,8 @@ class Bot:
             ORDER BY (p.author_id <= ?) DESC, p.created_at DESC LIMIT 120""",
                            (now - self.SESSION_WINDOW_S, now - fresh_seconds, newest_at, now, now - cooldown,
                             self.cfg.max_thread_depth, NPC_ID_CUTOFF if citizens_only else 1 << 62,
-                            # hard-No (-2) out of every pass; leaning-No (-1) only in the last-resort mixed pass
-                            -2 if (not citizens_only and not backlog) else -1,   # see LEAN_NO note above
+                            # hard-No (-2) out of every pass; leaning-No (-1) back in all passes (LEAN_NO_BACK)
+                            -2,
                             now - 3600, self.REPLIES_PER_CITIZEN_PER_HOUR,
                             NPC_ID_CUTOFF))
         rows = [r for r in rows if r["post_id"] not in self.skip_posts and r["post_id"] not in self.busy_posts

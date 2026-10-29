@@ -924,3 +924,25 @@ Changed: nothing. Night window is thin and partly unscored (median answer ~20 h)
 daytime window before acting on it.
 Expect by next run (22:20 UTC, AU morning): recent_6h reply avg_replies >= 0.03 and reply/1 >= 0.02; if reply/1 stays
 < 0.01 with n > 200 in daytime, lower stance weight "1" to 0.7 so 0 citizens and backlog take the slots.
+
+## 2026-10-30 08:50 Adelaide (Thu 22:20 UTC): leaning-No (-1) citizens back in all reply passes (scheduled review)
+Saw (18:46 deploy -> 22:16 UTC; no crashes/restarts/failed deploys; no WARNING/ERROR lines): suspended 31 flat (111/200
+accounts, 40 active), reports 24 h 32 inauthentic / 1 genuine, LLM $10.75 today (UTC). Writes ~3/min (full), mostly
+REPLY with a CONTINUATION burst; POST+LIFE ~9% of 24 h writes. A few "hard-No" thread endings (3 in 3 h).
+REPORT 21:07 recent_6h (15:07-21:07): reply n=789 0.027 replies / 0.038 likes pos 14 neg 2; reply/0 n=392 0.023/0.043;
+reply/1 n=337 0.030/0.030; reply/2 n=40 0.025/0.05 pos 1 neg 0; reply/-1 n=13 0.077; continuation n=72 0.125;
+continuation/-1 n=16 0.188 pos 1 neg 2. 24 h: npc_replies 173 (same hour yesterday 205), likes 192 (200), shifts pos 89 /
+neg 18. Same 6 h window yesterday (REPORT 20:35 28 Oct): reply-back 0.055, reply/-1 0.048.
+Market check (public feed 21:32-22:17): 289 citizen replies, 282 to team accounts; >= 17 to 12 of our accounts (only
+19 of our usernames known from logs, so ~23+/h), percy87 9 alone. Top earners (No side) agree with the citizen's worry
+first, then press their point.
+Previous change (+2 weight 0.5): reply/2 n=40, 0.025 replies / 0.05 likes, pos 1 neg 0: about level with 0/+1. Kept.
+reply/1 recovered to 0.030 (threshold 0.02), so no change to the +1 weight.
+Changed: (ctnbot/bot.py plan_reply) stance -1 citizens are back in the citizen and backlog passes (still no -2);
+(strategy.json, locked) stance_weights "-1" 0.15 -> 0.6 so they rank below 0/+1 but above the score bar. Reason: the -1
+exclusion (29 Oct 22:15 UTC) was justified by judged neg shifts at -80 each, but the portal log shows ~no change-of-mind
+points in our hourly totals, so judged shifts are not real points; -1 citizens answered most (0.048-0.067 vs ~0.03).
+Since the exclusion, same-window reply-back fell 0.055 -> 0.027 and 24 h citizen replies 205 -> 173.
+Expect by next run: reply/-1 n 80-200 per 6 h with avg_replies >= 0.04; overall reply avg_replies >= 0.035 in AU
+daytime; 24 h npc_replies back above 190 by tomorrow's same hour. Revert if reply/-1 avg_replies < 0.03, or if the portal
+shows real away-from-Yes deductions rising.
