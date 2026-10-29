@@ -966,12 +966,10 @@ class Bot:
         return {"kind": "reply", "row": dict(row), "r": dict(r), "target": target, "concerns": concerns,
                 "arg": arg, "smart": smart, "target_author": r["author_id"], "target_post_id": r["post_id"]}
 
-    # FRESH_VOICE (29 Oct 06:15 UTC): persona choice depends only on the citizen's concerns, so the 2nd and 3rd reply
-    # to an in-session citizen came from the same persona, often the same account, 10-12 min later with the same
-    # backstory (06:00-06:15: 6 citizens each got sparky_sam / uni_mateo / nurse_mere / ... twice). Reply-back fell
-    # 0.056 -> 0.031 once -1 citizens were dropped and repeats per 0/+1 citizen rose. Leaders' ~3 replies per citizen
-    # come from different accounts. So a reply to someone we already answered in the last 24 h uses an account and,
-    # when one is rested, a persona that has not written to them yet.
+    # FRESH_VOICE (29 Oct 06:20 UTC): persona choice depends only on the citizen's concerns and the persona bandit, so
+    # the 2nd and 3rd reply to an in-session citizen (up to 3/h) can come from the same persona, or the same account,
+    # with the same backstory. Leaders' ~3 replies per citizen come from different accounts. So a reply to someone we
+    # already wrote to in the last 24 h uses an account and, when one is rested, a persona that has not written to them.
     FRESH_VOICE_WINDOW_S = 24 * 3600
 
     def _pick_fresh_voice(self, author_id: int, concerns: list, now: float):

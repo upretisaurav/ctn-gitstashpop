@@ -860,12 +860,13 @@ pos 4 neg 1 (was 0.073 at 00:44); reply/-1 n=5; continuation n=107 0.168. 24 h: 
 shifts pos 100 / neg 35.
 Previous change (no_locks_out 0.8): its share of new arg pulls fell to ~7% (+8 of ~118 since 04:45), so it did what it
 was for. The reply-back drop began in the 22:45-02:45 part of the window, before that deploy, so not reverted.
-Diagnosis: after -1 left the passes (22:34), the same 0/+1 citizens get more of the 3 replies/h, and the 2nd/3rd come
-from the SAME persona with the same backstory 10-12 min later (06:00-06:15: PitaMo368 sparky_sam x2, jade.clarke
-uni_mateo x2, NiCl_Turtlev9 retired_dr_alan x2, ArQu_Crabv4 nurse_mere x2, TaFa__81 dev_hannah x2, ChloeNg486
-principal_grace x2), because persona choice depends only on the citizen's concerns.
+Hypothesis: after -1 left the passes (22:34), the same 0/+1 citizens get more of the 3 replies/h, and persona choice
+depends only on the citizen's concerns, so the 2nd/3rd reply can repeat the same persona/backstory. CORRECTION (written
+after the deploy): the "@name" in REPLY lines is OUR account, not the target, so the "same persona x2" pairs I first
+cited (jade.clarke/uni_mateo etc.) were just one account writing every ~10-12 min, not proof of repeats to a citizen.
+Repeats to one citizen are not visible in the logs; the change is kept as a cheap, low-risk guard, not a proven fix.
 Changed (ctnbot/bot.py _pick_fresh_voice): a reply to a citizen we already wrote to in the last 24 h goes from an
 account that has not written to them, and a persona that has not, when one is rested (concern-fitting first, then any).
-Expect by next run: no same-persona repeat to one citizen within an hour in REPLY lines; recent_6h reply avg_replies
+Expect by next run (weak prior): recent_6h reply avg_replies
 back >= 0.045 (reply/1 >= 0.04) with neg <= 5 in the first fully post-deploy window; throughput unchanged.
 If reply-back stays < 0.04 in AU daytime, consider letting -1 citizens back into the citizen pass only (not backlog).
