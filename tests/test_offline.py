@@ -349,6 +349,25 @@ def test_reply_targets_prefer_citizens_in_session_and_cap_per_citizen():
         assert job is None or job["target_author"] != 600, "backlog targets rest 4 h"
 
 
+
+def test_second_reply_to_a_citizen_uses_a_new_account_and_persona():
+    """Repeat replies to one citizen came from the same persona/account with the same backstory."""
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        for _ in range(6):
+            bot.create_account()
+        accts = bot.db.our_accounts("active")
+        now = time.time()
+        first = accts[0]
+        bot.db.x("INSERT INTO our_posts(post_id,account_id,persona_key,kind,target_id,created_at) VALUES(?,?,?,?,?,?)",
+                 (990101, first["account_id"], first["persona_key"], "reply", 777, now - 3000))
+        for _ in range(10):
+            row = bot._pick_fresh_voice(777, ["other"], now)
+            assert row is not None and row["account_id"] != first["account_id"]
+            if len({a["persona_key"] for a in accts}) > 1:
+                assert row["persona_key"] != first["persona_key"]
+        assert bot._pick_fresh_voice(778, ["other"], now) is not None
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):

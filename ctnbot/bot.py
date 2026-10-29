@@ -949,7 +949,7 @@ class Bot:
             self._miss[pass_name] = f"score {score:.3f} (rows {len(rows)})"
             return None
         concerns = json.loads(r["concerns"] or "[]") or ["other"]
-        row = self.pick_account(personas_for(concerns, [p["key"] for p in PERSONAS]), exclude=self.busy_accounts)
+        row = self._pick_fresh_voice(r["author_id"], concerns, now)
         if row is None:
             self._miss[pass_name] = f"no_account (rows {len(rows)}, busy {len(self.busy_accounts)})"
             return None
@@ -965,6 +965,36 @@ class Bot:
                   "reply_to_post_id": r["reply_to"], "author_id": r["author_id"]}
         return {"kind": "reply", "row": dict(row), "r": dict(r), "target": target, "concerns": concerns,
                 "arg": arg, "smart": smart, "target_author": r["author_id"], "target_post_id": r["post_id"]}
+
+    # FRESH_VOICE (29 Oct 06:15 UTC): persona choice depends only on the citizen's concerns, so the 2nd and 3rd reply
+    # to an in-session citizen came from the same persona, often the same account, 10-12 min later with the same
+    # backstory (06:00-06:15: 6 citizens each got sparky_sam / uni_mateo / nurse_mere / ... twice). Reply-back fell
+    # 0.056 -> 0.031 once -1 citizens were dropped and repeats per 0/+1 citizen rose. Leaders' ~3 replies per citizen
+    # come from different accounts. So a reply to someone we already answered in the last 24 h uses an account and,
+    # when one is rested, a persona that has not written to them yet.
+    FRESH_VOICE_WINDOW_S = 24 * 3600
+
+    def _pick_fresh_voice(self, author_id: int, concerns: list, now: float):
+        all_keys = [p["key"] for p in PERSONAS]
+        options = personas_for(concerns, all_keys)
+        prior = self.db.all("SELECT account_id, persona_key FROM our_posts WHERE target_id = ? AND created_at > ?",
+                            (author_id, now - self.FRESH_VOICE_WINDOW_S))
+        if not prior:
+            return self.pick_account(options, exclude=self.busy_accounts)
+        used_acc = {p["account_id"] for p in prior}
+        used_per = {p["persona_key"] for p in prior}
+        rested = {a["persona_key"] for a in self.db.our_accounts("active")
+                  if a["account_id"] not in self.busy_accounts and a["account_id"] not in used_acc}
+        fresh = ([k for k in options if k not in used_per and k in rested]
+                 or [k for k in all_keys if k not in used_per and k in rested])
+        row = None
+        if fresh:
+            row = self.pick_account(fresh, exclude=set(self.busy_accounts) | used_acc)
+            if row is not None and row["persona_key"] in used_per:
+                row = None          # pick_account fell back to any rested persona: try the softer option below
+        if row is None:
+            row = self.pick_account(options, exclude=set(self.busy_accounts) | used_acc)
+        return row or self.pick_account(options, exclude=self.busy_accounts)
 
     def compose_reply(self, job):
         r, row, target = job["r"], job["row"], job["target"]
