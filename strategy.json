@@ -19,7 +19,7 @@
     "-1": 0.15,
     "0": 1.4,
     "1": 1.0,
-    "2": 0.1
+    "2": 0.5
   },
   "argument_weights": {
     "no_locks_out": 0.8
@@ -31,7 +31,7 @@
     "Only mention the unpublished venue list or end date if the person raised it themselves",
     "Never volunteer the No side's talking points (venue list, end date, sunset) in a reply unless the person raised them",
     "Don't lean on the same stock facts every post (30 ICU beds, 40 nursing posts, nurse clinic and a helicopter); use a different detail or a personal moment instead",
-    "Replies and follow-ups: 2-3 sentences, 160-300 characters. First sentence answers the exact point they just made (their words, their example); then one concrete detail of your own. Short one-liners read as dismissive; a story that ignores their point reads as a script",
+    "Replies and follow-ups: 2-3 sentences, 160-300 chars. First sentence answers their exact point in their words; then one concrete detail of your own. A story that ignores their point reads as a script",
     "In a follow-up, never repeat a point already made in the thread; bring something new",
     "A quarter of our replies repeat 'nothing kicks in until everyone eligible has had a fair chance at the free jab'. Use the phase-in fact only if they raised access, cost or timing, and word it freshly",
     "Don't answer a worry with 'the details get settled in the regulations after a Yes': it concedes their point. Answer the worry directly, then give your own reason"

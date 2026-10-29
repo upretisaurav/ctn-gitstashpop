@@ -886,3 +886,22 @@ says their answer moved towards Yes (shift > 0); otherwise the thread ends ("end
 they rest from targeting. continuation/-2 was ~-24 points per write (0.375*15 + 0.125*5 - 3/8*80).
 Expect by next run: continuation/-2 n <= 3 in the next 6 h window, continuation neg <= 1; a few "hard-No" ending
 lines per hour; continuation share stays >= 10%; total neg shift (24 h) falls below 30.
+
+## 2026-10-30 01:00 Adelaide (Thu 14:30 UTC): stance +2 weight 0.1 -> 0.5 (scheduled review)
+Saw (10:38 deploy -> 14:27 UTC, AU evening/night; no crashes/restarts/failed deploys; a few platform timeouts):
+suspended 31 flat (111/200 accounts), hidden 111 flat, reports 304 inauthentic / 30 genuine, LLM $7.40 today (UTC),
+RATELIMIT limit=3 unchanged. Writes 13:56-14:26: ~78 REPLY, 2 CONTINUATION, 2 POST, 4 LIFE (~170/h, full; POST+LIFE 7%).
+REPORT 12:59 recent_6h (06:59-12:59): reply n=758 0.037 replies / 0.061 likes pos 15 neg 1; continuation n=102 0.098
+pos 4 neg 1; continuation/-2 n=3 pos 0 neg 0; reply/0 n=480 0.033/0.054 pos 5 neg 1; reply/1 n=260 0.038/0.069 pos 9
+neg 0; reply/2 n=7 0.143/0.143; post n=38 0 replies / 0.053 likes; life n=43 0/0. 24 h: npc_replies 223 (same hour
+yesterday 186), likes 222 (198), shifts pos 117 / neg 28 (74 / 29).
+Previous change (no CONTINUATION to -2 unless they moved): WORKED: continuation/-2 n 8 -> 3, neg 3 -> 0; continuation
+neg 1; 24 h neg shift 28 (< 30 target). Kept.
+Changed (strategy.json, locked key): stance_weights "2" 0.1 -> 0.5. Ground truth says our points are almost all
+citizen replies/likes, not shifts; firmly-Yes citizens answered 0.14 / liked 0.14 per reply (n=7, small) vs ~0.04 /
+0.06 for 0 and +1, and at 0.1 they mostly fall under the score bar, so those slots go to POST/LIFE (~0 replies). They
+cannot move towards Yes, but replies that agree with them carry little -80 risk. Also shortened style note 5 to fit the
+220-char bound (it was being cut mid-sentence).
+Expect by next run: reply/2 n 30-80 per 6 h with avg_replies >= 0.07 and neg <= 1; reply/0 and reply/1 n roughly
+unchanged in AU daytime; POST share not higher. If reply/2 avg_replies + avg_likes < reply/0's, or neg >= 3, set it back
+to 0.1.
