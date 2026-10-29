@@ -870,3 +870,19 @@ account that has not written to them, and a persona that has not, when one is re
 Expect by next run (weak prior): recent_6h reply avg_replies
 back >= 0.045 (reply/1 >= 0.04) with neg <= 5 in the first fully post-deploy window; throughput unchanged.
 If reply-back stays < 0.04 in AU daytime, consider letting -1 citizens back into the citizen pass only (not backlog).
+
+## 2026-10-29 20:50 Adelaide (Thu 10:20 UTC): no CONTINUATION to hard-No citizens unless they moved (scheduled review)
+Saw (07:00 deploy -> 10:18 UTC, AU evening; no crashes/restarts/failed deploys; only transient platform timeouts
+07:31-09:49): suspended 30 -> 31 (@jade.clarke 08:10), 111/200 accounts, 24 h reports 29 inauthentic / 3 genuine
+(reporting blocked until 11:25 UTC), LLM $4.77 today (UTC), RATELIMIT limit=3 unchanged.
+Writes 09:50-10:18: ~70 REPLY, 10 CONTINUATION, 3 POST, 1 LIFE (~180/h, full; POST+LIFE ~5%, CONTINUATION ~12%).
+REPORT 09:01 recent_6h (03:01-09:01): reply n=758 0.044 replies / 0.059 likes pos 15 neg 5 (05:32 window 0.031,
+00:44 window 0.056); reply/0 n=465 0.041 pos 5 neg 4; reply/1 n=267 0.041 pos 9 neg 1; continuation n=116 0.103;
+continuation/-2 n=8 0.375 replies but pos 0 neg 3. 24 h: npc_replies 216, likes 218, shifts pos 102 / neg 32.
+Previous change (fresh voice per repeat reply, live 07:00): reply-back recovered 0.031 -> 0.044 (window only ~2 h
+post-deploy, so weak evidence); throughput unchanged. Kept.
+Changed (ctnbot/bot.py compose_continuation): a stance -2 citizen who answers us gets a follow-up only if the judge
+says their answer moved towards Yes (shift > 0); otherwise the thread ends ("ending thread with N: hard-No") and
+they rest from targeting. continuation/-2 was ~-24 points per write (0.375*15 + 0.125*5 - 3/8*80).
+Expect by next run: continuation/-2 n <= 3 in the next 6 h window, continuation neg <= 1; a few "hard-No" ending
+lines per hour; continuation share stays >= 10%; total neg shift (24 h) falls below 30.

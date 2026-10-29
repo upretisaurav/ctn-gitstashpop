@@ -835,6 +835,13 @@ class Bot:
                 return None
         elif shift > 0:
             self._pushbacks.pop(actor, None)
+        # Hard-No (-2) citizens: REPORT 29 Oct 09:01 recent_6h continuation/-2 n=8, 0.375 replies but pos 0 / neg 3
+        # (~-24 points per continuation), the same pattern as fresh replies to -2 (pos 0 / neg 3-4 per window). Only
+        # keep talking when their answer actually moved towards us.
+        if prof is not None and prof["stance"] == -2 and shift <= 0:
+            self.db.x("UPDATE accounts SET last_targeted=? WHERE account_id=?", (time.time(), actor))
+            log.info("ending thread with %s: hard-No, no move towards Yes (shift %.2f)", actor, shift)
+            return None
         text, model = self.writer.continuation(
             persona_key=row["persona_key"], display_name=row["display_name"],
             our_post=(ours["body"] if ours else ""), their_reply=full.get("body") or "",
