@@ -16,7 +16,7 @@
   "smart_reply_min_persuadable": 0.55,
   "stance_weights": {
     "-2": 0.1,
-    "-1": 0.6,
+    "-1": 1.0,
     "0": 1.4,
     "1": 1.0,
     "2": 0.5

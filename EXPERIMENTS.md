@@ -955,3 +955,20 @@ Bot: 40 active / 111 total / 31 suspended (+1 in 24 h), hidden 111 flat, reports
 Bug: since ~01:00 UTC one account's cached session token expired server-side and poll_notifications raised 401 every
 round it came up (every ~2 min), aborting that round for the other 3 accounts in it. Platform.notifications now drops
 the session, clears the token and signs in again once (as _write already did). No strategy change.
+
+## 2026-10-30 12:50 Adelaide (Fri 02:20 UTC): stance -1 weight 0.6 -> 1.0 (scheduled review)
+Saw (01:56 deploy -> 02:17 UTC, AU midday; no crashes/restarts/failed deploys; no ERROR lines since the 401 re-login fix
+went live at 01:56): suspended 31 flat (111/200 accounts, 40 active), hidden 111 flat, reports 24 h 39 inauthentic /
+1 genuine (not blocked), LLM $1.02 today (UTC), RATELIMIT limit=3 unchanged. Writes 01:47-02:17: 67 REPLY,
+11 CONTINUATION, 4 POST, 4 LIFE (~175/h, full; POST+LIFE 9%, CONTINUATION 13%).
+REPORT 01:57 recent_6h (19:57-01:57): reply n=786 0.041 replies / 0.053 likes pos 18 neg 3; reply/-1 n=89 0.079/0.056
+pos 3 neg 2; reply/1 n=267 0.052/0.037; reply/0 n=417 0.024/0.065; continuation n=117 0.12/0.068 (continuation/-1 n=21
+0.095). Points per write (15/reply + 5/like): reply/-1 ~1.47, reply/1 ~0.97, reply/0 ~0.69, continuation ~2.1.
+24 h: npc_replies 171, likes 199, shifts pos 87 / neg 20.
+Previous change (-1 citizens back, weight 0.6, live 22:41): WORKED: reply/-1 n=89 (target 80-200), avg_replies 0.079
+(target >= 0.04); overall reply avg_replies 0.041 (target >= 0.035); judged neg shift 3 in 6 h, no rise. Kept.
+Changed (strategy.json, already locked): stance_weights "-1" 0.6 -> 1.0, level with +1 and below 0 (1.4). -1 citizens
+have answered best in every window since 28 Oct (0.048-0.079 vs ~0.03 for 0/+1), so give them more of the slots that
+now go to 0 citizens (reply/0 the weakest: 0.024 replies).
+Expect by next run: reply/-1 n 130-250 per 6 h with avg_replies >= 0.05; overall reply avg_replies >= 0.04; neg judged
+shift (6 h) <= 6. Revert to 0.6 if reply/-1 avg_replies < 0.04 or overall reply-back falls below 0.035.
