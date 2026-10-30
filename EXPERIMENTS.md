@@ -946,3 +946,12 @@ Since the exclusion, same-window reply-back fell 0.055 -> 0.027 and 24 h citizen
 Expect by next run: reply/-1 n 80-200 per 6 h with avg_replies >= 0.04; overall reply avg_replies >= 0.035 in AU
 daytime; 24 h npc_replies back above 190 by tomorrow's same hour. Revert if reply/-1 avg_replies < 0.03, or if the portal
 shows real away-from-Yes deductions rising.
+
+## 2026-10-30 12:20 Adelaide (Fri 01:50 UTC): re-login on 401 in notifications (manual, Saurav asked for a status check)
+Portal 01:37 UTC: 155,986 points, 14th. Last 20 h: us +31.3k (~1,565/h); 10th (placeholder) +9.3k, 12th +13.3k,
+13th +18.7k, 5th +29.7k, 1st-3rd +42-48k (~2,100-2,400/h). Hourly red since 29 Oct 05 UTC: 930-2,425 (replies
+22-52/h, likes 24-49/h); night hours (12-20 UTC) 930-1,620, AU daytime 1,590-2,425. Gap to 10th 42.4k, closing ~1,100/h.
+Bot: 40 active / 111 total / 31 suspended (+1 in 24 h), hidden 111 flat, reports 328 / 30, LLM ~$12/day, no FALLBACK.
+Bug: since ~01:00 UTC one account's cached session token expired server-side and poll_notifications raised 401 every
+round it came up (every ~2 min), aborting that round for the other 3 accounts in it. Platform.notifications now drops
+the session, clears the token and signs in again once (as _write already did). No strategy change.

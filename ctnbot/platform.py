@@ -234,7 +234,17 @@ class Platform:
             return []
         self.limits.read.wait_take(30)
         acct = self.session(row)
-        return list(acct.notifications(unresolved=True, limit=limit))
+        try:
+            return list(acct.notifications(unresolved=True, limit=limit))
+        except Exception as e:
+            if getattr(e, "status", None) != 401:
+                raise
+            # The cached session's token expired server-side (30 Oct: one account 401'd every poll for hours and
+            # aborted the whole round); sign in again once, like _write does.
+            self.drop_session(row["account_id"])
+            self.db.x("UPDATE our_accounts SET token=NULL WHERE account_id=?", (row["account_id"],))
+            acct = self.session(self.db.one("SELECT * FROM our_accounts WHERE account_id=?", (row["account_id"],)))
+            return list(acct.notifications(unresolved=True, limit=limit))
 
     def resolve_notifications(self, row, up_to_id: int) -> None:
         if self.cfg.dry_run and not self.cfg.fake_platform:
