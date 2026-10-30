@@ -995,3 +995,22 @@ REPLY and ~2.2 per CONTINUATION). The reply passes have not run dry since the de
 citizen replies. Bans have been flat for a day, so the human-looking LIFE cover is less needed than the slots.
 Expect by next run: POST+LIFE <= 6% of daytime writes; REPLY+CONTINUATION >= 94%; no FALLBACK spike; suspended still 31-32.
 Revert to 0.05 if bans rise by >= 2 in 4 h or FALLBACK lines appear more than a few times an hour.
+
+## 2026-10-30 20:50 Adelaide (Fri 10:20 UTC): life_post_every 18 -> 36 (scheduled review)
+Saw (06:43 deploy -> 10:20 UTC, AU evening; no crashes/restarts/failed deploys; no WARNING/ERROR lines): suspended 31 flat
+(111/200 accounts, 40 active), hidden 1 in 24 h, reports 24 h 51 inauthentic / 0 genuine, LLM $4.93 today (UTC),
+RATELIMIT limit=3 unchanged, no FALLBACK lines. Writes 09:20-10:20: ~146 REPLY, 21 CONTINUATION, 4 POST, 9 LIFE (~180/h,
+full; POST+LIFE ~7%, CONTINUATION ~12%); 09:50-10:20 alone 73 REPLY / 9 CONT / 1 POST / 6 LIFE.
+REPORT 09:23 recent_6h (03:23-09:23): reply n=778 0.037 replies / 0.059 likes pos 15 neg 8; reply/0 n=351 0.028/0.057;
+reply/1 n=219 0.046/0.05; reply/-1 n=192 0.047/0.078 pos 2 neg 5; continuation n=115 0.087/0.122; post n=37 0/0.027;
+life n=50 0/0. 24 h: npc_replies 173, likes 207, shifts pos 91 / neg 24; by kind reply 0.037/0.05, continuation
+0.12/0.088, post 0.014/0.035, life 0/0.015.
+Previous change (share_top_level 0.02, live 06:43): POST fell from ~14/h to ~4/h; bans flat, no FALLBACK. Worked on aim,
+but POST+LIFE still ~7% (target <= 6%) because LIFE (~10/h) is now the larger part. Kept.
+Stance -1 weight 1.0 (02:36): reply/-1 0.047 replies / 0.078 likes (n=192), best points per write among stances
+(~1.1 vs reply/0 ~0.7); above the 0.04 revert bar. Kept.
+Changed (ctnbot/config.py): life_post_every 18 -> 36. A LIFE post replaces a planned citizen reply (the check runs after
+the target is chosen), and LIFE earns ~0 (24 h: 202 posts, 0 citizen replies, 3 likes). Halving it returns ~5 slots/h to
+citizen replies (~0.8-1.1 points each). Bans have been flat for >30 h, so less human-cover posting is affordable.
+Expect by next run: LIFE ~4-6/h, POST+LIFE <= 6% of writes, REPLY+CONTINUATION >= 94%; suspended still 31-32.
+Revert to 18 if suspensions rise by >= 2 in 4 h.

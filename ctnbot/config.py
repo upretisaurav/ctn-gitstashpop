@@ -64,7 +64,7 @@ class Config:
     mentions_per_post: int = 4             # top-level post mentions (max 4)
     share_top_level: float = 0.15          # fraction of write slots for top-level posts
     boost_likes_per_post: int = 2          # teammate likes on our own top-level posts
-    life_post_every: int = 18              # every Nth post from an account is a slice-of-life post
+    life_post_every: int = 36              # every Nth post from an account is a slice-of-life post (18 until 30 Oct: ~10 LIFE/h earning ~0)
 
     # Blue team
     blue_enabled: bool = True
