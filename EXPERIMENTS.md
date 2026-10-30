@@ -1036,3 +1036,21 @@ turning ~5 dropped answers/h into follow-ups should add ~0.5 citizen replies + l
 Expect by next run: CONTINUATION share of writes 11-15% (from ~9-12%), few "thread depth" lines (only depth 9+);
 continuation avg_replies stays >= 0.08 (deep threads may answer less). Revert to 7 if continuation avg_replies falls
 below 0.07 or neg shifts on continuations rise to >= 3 per 6 h.
+
+## 2026-10-31 04:45 Adelaide (Fri 18:15 UTC): no change; let the depth-9 follow-ups run into AU daytime (scheduled review)
+Saw (14:47 deploy -> 18:17 UTC, AU night/early morning; no crashes/restarts/failed deploys; no WARNING/ERROR lines):
+suspended 31 flat (111/200, 40 active), hidden 3 in 24 h, reports 24 h 40 inauthentic / 0 genuine, LLM $9.52 today
+(UTC), RATELIMIT limit=3 unchanged, STRATEGIST ran 17:37 (style_notes locked, so its notes did not apply). Writes
+18:08-18:17: ~24 REPLY/CONTINUATION in 8 min (~180/h, full), 3 CONTINUATION (~12%), no POST/LIFE in the sample.
+REPORT 17:37 recent_6h (11:37-17:37): reply n=833 0.031 replies / 0.052 likes pos 13 neg 4; reply/0 n=374 0.029/0.056;
+reply/1 n=238 0.029/0.059; reply/-1 n=199 0.025/0.035 pos 1 neg 2; reply/2 n=17 0.118/0.059; continuation n=103
+0.165/0.223 pos 6 neg 0 (continuation/0 0.17, /1 0.184); life n=23 0/0; post n=8 0/0. 24 h: npc_replies 210 (14:20 run:
+176), likes 250 (204), shifts pos 106 / neg 23; by kind reply 0.046/0.055, continuation 0.112/0.122.
+Previous change (follow-up depth cap 9, live 14:47): only 2 "no continuation ... thread depth 9" lines in 3.5 h (so few
+answers are dropped now); continuation avg_replies 0.165 / likes 0.223 (target >= 0.08; was 0.092/0.117), neg 0.
+24 h citizen replies +34 and likes +46 since the last run. WORKED so far. Kept.
+Stance -1 (weight 1.0): this night window 0.025/0.035 is the weakest stance and below the 0.04 bar, but across the four
+windows since 02:36 it averages ~0.037 replies vs ~0.035 for stance 0, so not reverted on one night window. Re-check in
+AU daytime; set "-1" to 0.6 if the 11:00 UTC REPORT again shows reply/-1 below 0/+1 on both replies and likes.
+Changed: nothing. A second change now would confound the depth-cap measurement in the busier AU-daytime hours.
+Expect by next run: continuation 10-15% of writes, continuation avg_replies >= 0.1; 24 h npc_replies >= 210.
