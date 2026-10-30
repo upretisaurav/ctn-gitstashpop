@@ -488,6 +488,11 @@ class Bot:
     # write nothing but follow-ups. So we follow up with everyone; we only stop after two strong pushbacks in a row.
     CONTINUE_MIN_SHIFT = -0.7      # a strong pushback
     CONTINUE_MAX_PUSHBACK = 2      # stop the thread after this many strong pushbacks from the same citizen
+    # Follow-ups use their own depth cap (fresh replies keep cfg.max_thread_depth = 7). Public feed sample 30 Oct
+    # 13:55-14:22 UTC: 32 of 151 citizen replies (21%) sat at depth 7-10, 31 of them answering a team account (depth 8:
+    # 21, depth 10: 3). With the cap at 7 we dropped every answer at depth 7-8 silently: ~14 CONTINUATION/h against
+    # ~21 citizen replies/h to us. 9 lets us answer citizens at depth 7 and 8.
+    CONTINUE_MAX_DEPTH = 9
     NIGHT_SKIP = 0.6               # share of empty night slots left unused (no standalone post)
     NIGHT_SKIP_SECONDS = 20        # one write slot (team limit 3 writes a minute)
     # The random skip alone did not bind: drafts are planned ahead (queue of 3), so even with 60% of plans skipped the
@@ -819,8 +824,9 @@ class Bot:
             full = self.p.read("get_post", their["post_id"])
         except Exception:
             full = their
-        thread, depth = self.thread_context(full)
-        if depth is not None and depth >= self.cfg.max_thread_depth:
+        thread, depth = self.thread_context(full, max_up=self.CONTINUE_MAX_DEPTH + 1)
+        if depth is not None and depth >= self.CONTINUE_MAX_DEPTH:
+            log.info("no continuation for %s: thread depth %s", actor, depth)
             return None
         ours = self.db.one("SELECT body FROM our_posts WHERE post_id=?", (full.get("reply_to_post_id"),))
         # Arguing on with someone who is pushing back mostly gets the No case restated at us (and risks moving them

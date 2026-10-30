@@ -1014,3 +1014,25 @@ the target is chosen), and LIFE earns ~0 (24 h: 202 posts, 0 citizen replies, 3 
 citizen replies (~0.8-1.1 points each). Bans have been flat for >30 h, so less human-cover posting is affordable.
 Expect by next run: LIFE ~4-6/h, POST+LIFE <= 6% of writes, REPLY+CONTINUATION >= 94%; suspended still 31-32.
 Revert to 18 if suspensions rise by >= 2 in 4 h.
+
+## 2026-10-31 00:50 Adelaide (Fri 14:20 UTC): follow-up depth cap 7 -> 9 (scheduled review)
+Saw (10:41 deploy -> 14:20 UTC, AU night; no crashes/restarts/failed deploys; transient Legit Social 502 / connection
+resets at 12:18, 13:51, 14:06-14:08, each task retried on its own): suspended 31 flat (111/200, 40 active), hidden +2
+(921411, 921854) in 4 h, reports 24 h 49 inauthentic / 0 genuine, LLM $7.40 today (UTC), RATELIMIT limit=3 unchanged.
+Writes 13:50-14:20: 68 REPLY, 7 CONTINUATION, 3 LIFE, 0 POST (~156/h at night; POST+LIFE ~4%, CONTINUATION ~9%).
+REPORT 13:31 recent_6h (07:31-13:31): reply n=804 0.037 replies / 0.035 likes pos 14 neg 3; reply/0 n=387 0.034/0.041;
+reply/1 n=212 0.033/0.028; reply/-1 n=189 0.037/0.032; reply/2 n=14 0.143/0; continuation n=120 0.092/0.117 pos 5 neg 0;
+life n=35 0/0; post n=20 0/0. 24 h: npc_replies 176, likes 204, shifts pos 86 / neg 23; by kind reply 0.039/0.047,
+continuation 0.104/0.099, life 0/0.016, post 0.015/0.029.
+Previous change (life_post_every 36, live 10:41): LIFE ~6/h (13:50-14:20: 3), was ~10/h; POST+LIFE ~4% (target <= 6%);
+bans flat. Worked. Kept.
+Finding: STATUS npc_replies_to_us rose ~21/h (13:51-14:11) while CONTINUATION ran ~14/h, few "ending thread" lines
+(2 in 2 h). Public feed sample 13:55-14:22 UTC (1,500 posts, 151 citizen replies): depth 1:5, 2:26, 3:14, 4:25, 5:15,
+6:34, 7:7, 8:21, 9:1, 10:3; 31 of the 32 at depth >= 7 answer a team account. compose_continuation dropped every
+citizen answer at depth >= 7 (cfg.max_thread_depth) silently, i.e. ~1 in 5 of the citizens who answer us.
+Changed (ctnbot/bot.py): follow-ups use Bot.CONTINUE_MAX_DEPTH = 9 (fresh replies keep 7), thread walk max_up 10, and a
+"no continuation for X: thread depth N" log line. Continuations earn ~2.5x a fresh reply (0.10 vs 0.04 replies), so
+turning ~5 dropped answers/h into follow-ups should add ~0.5 citizen replies + likes/h now and more in AU daytime.
+Expect by next run: CONTINUATION share of writes 11-15% (from ~9-12%), few "thread depth" lines (only depth 9+);
+continuation avg_replies stays >= 0.08 (deep threads may answer less). Revert to 7 if continuation avg_replies falls
+below 0.07 or neg shifts on continuations rise to >= 3 per 6 h.
