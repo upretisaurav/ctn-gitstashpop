@@ -1074,3 +1074,20 @@ Changed (strategy.json, stance_weights locked): "-1" 1.0 -> 0.6 (its 12:50 value
 Expect by next run (AU daytime, compare with 30 Oct 02:00 UTC): reply/-1 n falls to ~110-130 per 6 h, reply/0 + reply/1
 n rise; overall reply avg_replies >= 0.04 in daytime; 24 h npc_replies >= 210. Revert to 1.0 if pos shifts per 6 h
 fall by >= 5 or reply avg_replies does not move.
+
+## 2026-10-31 10:20 Adelaide (Fri 23:50 UTC): aim replies at changes of mind (manual; organisers' rule change)
+Organisers (Discord, 30 Oct): the referendum persuasion pool grows from 100,000 to 500,000 points: 100,000 divided by
+persuasion weight over the first 11 days, 400,000 over the LAST 3 DAYS (30 Oct -> finish). Weight = qualifying changes
+of mind towards the winning side (1 each) + contributions (0.5 shared per session). Yes led Poll 3, so Yes is the likely
+winner; our weight so far is tiny (2 primary changes ever, ~230 shared contributions = ~30). Any of the THREE
+vaccination views counts (referendum question, vaccination in general, yearly shots), and "agreement alone is not a
+change of mind".
+Changed: (1) ctnbot/persuade.py: reply and continuation prompts now carry a PERSUASION AIM line built from the
+citizen's three stances: name the view with the most room (doubtful/undecided on vaccination in general or yearly
+shots first, then the ballot), demand ONE concrete reason tied to their situation and an invitation to say what they
+make of it; "agreement, sympathy or restating the ballot earns nothing". The reply prompt also shows all three leans.
+(2) ctnbot/bot.py _target_score: movable_w 1.3 for citizens undecided/doubtful on vaccination in general or yearly
+shots. Red-point targeting (fresh, in-session, 3/citizen/h) is unchanged, so citizen replies/h should hold.
+Measure: portal daily "contributions to changes of mind towards your side" (CSV; 10-26..10-29: 47/35/44/35 per day)
+and "primary"; in logs, REPORT pos/neg shifts and "moved" counts. Expect 1 Nov: contributions/day > 60, first primaries;
+reply avg_replies within 10% of 30 Oct. If citizen replies/h fall > 15%, soften the AIM line (keep it one sentence).

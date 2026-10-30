@@ -1062,8 +1062,12 @@ class Bot:
         # the live feed is other teams' accounts that the classifier often rates as "NPC"; replying to them earns
         # nothing and draws No-side rebuttals. Down-weight them so a citizen wins whenever one is in the pool.
         citizen_w = 1.0 if r["author_id"] <= NPC_ID_CUTOFF else float(self.strategy["noncitizen_target_weight"])
+        # 31 Oct rule change: 400,000 pool points for changes of mind towards Yes in the last 3 days, on ANY of the
+        # three vaccination views. A citizen who is undecided or doubtful on vaccination in general or on yearly
+        # shots has a view we can still move, whatever they think of the ballot.
+        movable_w = 1.3 if any(-1 <= (r[k] or 9) <= 0 for k in ("stance_vacc", "stance_yearly")) else 1.0
         return citizen_w * (r["npc_score"] or 0) * (r["persuadable"] if r["persuadable"] is not None else 0.5 + 0.0) * \
-            stance_w * concern_w * fresh * session_w * depth_w * trending * on_topic + 0.01
+            stance_w * concern_w * fresh * session_w * depth_w * trending * on_topic * movable_w + 0.01
 
     # ---- 3. top-level posts ----------------------------------------------
     def plan_top_level(self):

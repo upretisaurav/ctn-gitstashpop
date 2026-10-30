@@ -98,8 +98,10 @@ class Writer:
                 f"THREAD SO FAR (oldest first):\n{ctx}\n\n"
                 f"THE POST YOU ARE REPLYING TO (by a fellow citizen):\n  \"{(target_post.get('body') or '')[:500]}\"\n\n"
                 f"What we know about them: {prof.get('identity') or 'nothing yet'}; worries: {concerns}; "
-                f"current lean on the question: {_lean(prof.get('stance'))}.\n"
-                f"Angle to lead with (adapt it, don't recite it): {arg}\n\n"
+                f"current lean on the question: {_lean(prof.get('stance'))}; on vaccination in general: "
+                f"{_lean(prof.get('stance_vacc'))}; on yearly shots: {_lean(prof.get('stance_yearly'))}.\n"
+                f"Angle to lead with (adapt it, don't recite it): {arg}\n"
+                f"{_persuasion_aim(prof)}\n\n"
                 f"Write your reply now. Output only the reply text.")
         text, model = self.llm.complete(self.system, user, smart=smart, max_tokens=230)
         return self.clean(text), model
@@ -111,7 +113,7 @@ class Writer:
         user = (f"{persona_card(persona_key, display_name)}\n\n"
                 f"You said: \"{our_post[:400]}\"\nThey answered you: \"{their_reply[:500]}\"\n"
                 f"Earlier in the thread:\n{ctx}\n"
-                f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n\n"
+                f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n{_persuasion_aim(prof)}\n\n"
                 f"Keep the conversation going (2-3 sentences, 160-300 characters): answer the exact thing they said first, "
                 f"add one new personal detail or one new fact they haven't heard yet, and leave them something easy to "
                 f"answer. If they are moving your way, say so warmly and build on it, don't push. If they raised a new "
@@ -238,6 +240,31 @@ class Writer:
             if difflib.SequenceMatcher(None, t.lower(), e["body"].lower()).ratio() > 0.6:
                 return True
         return False
+
+
+def _persuasion_aim(prof: dict) -> str:
+    """One line telling the writer which of the citizen's three vaccination views has room to move.
+
+    The scoring counts a change of mind on ANY of the three views (the referendum question, vaccination in general,
+    yearly shots), and the organisers' 31 Oct rule change made persuasion in the last 3 days worth 400,000 pool
+    points. Agreement is not a change of mind; the citizen has to state something differently than before."""
+    views = [("vaccination in general", prof.get("stance_vacc")),
+             ("getting a yearly shot", prof.get("stance_yearly")),
+             ("the referendum question itself", prof.get("stance"))]
+    known = [(name, v) for name, v in views if v is not None]
+    movable = [(name, v) for name, v in known if -1 <= v <= 0] or [(name, v) for name, v in known if v == 1]
+    if not movable:
+        return ("PERSUASION AIM: they already lean our way; don't re-sell it. Give them one new, concrete reason that "
+                "makes them say something they haven't said yet, or ask what would make them more sure.")
+    name, v = min(movable, key=lambda t: t[1])     # the most doubtful view first
+    if v == 1:
+        return (f"PERSUASION AIM: they are only mildly for {name}. Give them ONE concrete reason, tied to their own "
+                f"situation, that firms that up, and ask what would make them sure. Agreement alone earns nothing.")
+    where = {-1: "doubtful about", 0: "undecided on"}[v]
+    return (f"PERSUASION AIM: they are {where} {name}. Your reply must give them ONE concrete, specific reason, "
+            f"tied to their own situation, to think differently about {name}, and invite them to say what they "
+            f"make of it. Agreement, sympathy or restating the ballot earns nothing; a changed sentence from them "
+            f"is the goal.")
 
 
 def _lean(stance) -> str:
