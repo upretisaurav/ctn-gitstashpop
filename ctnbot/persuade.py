@@ -119,7 +119,8 @@ class Writer:
                 f"answer. If they are moving your way, say so warmly and build on it, don't push. If they raised a new "
                 f"doubt, answer it with a reason for Yes without restating the doubt or agreeing it is a problem. If they "
                 f"are firmly against, stay friendly and curious about their situation rather than arguing. Never repeat "
-                f"a point already made in this thread. Output only the reply.")
+                f"a point already made in this thread: if you (or a neighbour) already made the case on that view "
+                f"above, don't make it again; take their answer one step further or ask about it. Output only the reply.")
         text, model = self.llm.complete(self.system, user, smart=True, max_tokens=230)
         return self.clean(text), model
 
@@ -273,15 +274,21 @@ def _persuasion_aim(prof: dict) -> str:
 # boosters are needed, I'd rather boosters only when the evidence calls for it", "case-by-case") and the citizens
 # answered with case-by-case / voluntary lines (negative shifts on posts 966022, 969708). The view is "would I get
 # a yearly shot", so the persona must say they WOULD, honestly, without claiming boosters are proven necessary.
+# 31 Oct 06:20 UTC review: the hint above turned into a formula. Writers opened with "On the yearly shot, I'd roll my
+# sleeve up every year if they recommend it" (5 accounts in 15 min; dev_hannah sent the same laptop-patch line to the
+# same citizen twice) and bolted it onto replies about something else. Continuations fell 0.088 -> 0.073 replies/write
+# with neg shifts 0 -> 4; two -1.0 shifts were citizens calling a family-based pitch a guilt trip.
 _VIEW_HINTS = {
     "getting a yearly shot": (
-        " On the yearly shot: speak as someone who WOULD get it each year if it's recommended, with a reason from "
-        "your own life or job, in your own words (other neighbours already said 'free, five minutes, like the flu "
-        "jab': don't reuse that). Never say you'd skip, wait, only get boosters 'if needed' or 'case by case', and "
-        "don't lead with what isn't known yet."),
+        " On the yearly shot: build it out of what THEY just said (their job, their week, their worry), so it reads as "
+        "an answer, not a pitch. You'd get it each year if it's recommended, but show it through one specific reason "
+        "from your life; don't announce it. Never open with 'On the yearly shot', never use 'roll my sleeve up', "
+        "'if they recommend it', 'free, five minutes' or 'like the flu jab'. Never say you'd skip, wait or go "
+        "'case by case', and don't lead with what isn't known yet. Don't use their family or kids as the reason."),
     "vaccination in general": (
         " On vaccination itself: say plainly you'd get it (or did) and one concrete reason from your life or the "
-        "trial results (less serious illness). Don't dwell on unknowns or side effects unless they raised them."),
+        "trial results (less serious illness), linked to what they said. Don't dwell on unknowns or side effects "
+        "unless they raised them. Don't use their family or kids as the reason."),
 }
 
 
