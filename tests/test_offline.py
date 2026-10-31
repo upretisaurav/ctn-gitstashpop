@@ -368,6 +368,19 @@ def test_second_reply_to_a_citizen_uses_a_new_account_and_persona():
                 assert row["persona_key"] != first["persona_key"]
         assert bot._pick_fresh_voice(778, ["other"], now) is not None
 
+def test_judge_shift_ignores_fallback_model():
+    """The 3B fallback scored almost every citizen answer -1.00 during a Claude outage."""
+    with tempfile.TemporaryDirectory() as tmp:
+        bot = Bot(_cfg(tmp))
+        w: Writer = bot.writer
+        w.llm.complete = lambda *a, **k: ('{"shift": -1.0, "moved": false}', "qwen2.5-3b-instruct")
+        assert w.judge_shift("vote yes", "no way") == (0.0, False)
+        w.llm.complete = lambda *a, **k: ("", "none")
+        assert w.judge_shift("vote yes", "no way") == (0.0, False)
+        w.llm.complete = lambda *a, **k: ('{"shift": 0.6, "moved": true}', "claude-haiku-5-5")
+        assert w.judge_shift("vote yes", "fair, leaning yes") == (0.6, True)
+
+
 if __name__ == "__main__":
     t0 = time.time()
     for name, fn in list(globals().items()):

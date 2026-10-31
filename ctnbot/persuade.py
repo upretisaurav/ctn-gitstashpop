@@ -194,8 +194,13 @@ class Writer:
                 f"0 if it is off-topic, chit-chat or genuinely mixed.\n"
                 f"Return JSON {{\"shift\": -1..1, \"moved\": true|false}}; moved is true only if they explicitly "
                 f"concede or say they are reconsidering towards {'YES' if yes_side else 'NO'}.")
-        text, _ = self.llm.complete("You judge stance shifts in short social media replies. Answer with JSON only.",
-                                    user, smart=False, max_tokens=60, temperature=0.0, cache_system=False)
+        text, model = self.llm.complete("You judge stance shifts in short social media replies. Answer with JSON only.",
+                                        user, smart=False, max_tokens=60, temperature=0.0, cache_system=False)
+        # 31 Oct 10:40-11:43 UTC Claude hit a workspace usage limit and the 3B fallback judged almost every citizen
+        # answer -1.00 (~30 in an hour: 24 h negative_shift 30 -> 57), which ended live threads as "pushed back hard"
+        # and fed the bandits false penalties. A missing judge is "unknown", never "against us".
+        if model in ("qwen2.5-3b-instruct", "none"):
+            return 0.0, False
         o = extract_json(text) or {}
         try:
             return max(-1.0, min(1.0, float(o.get("shift", 0)))), bool(o.get("moved", False))
