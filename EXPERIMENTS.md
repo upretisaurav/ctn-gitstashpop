@@ -1114,3 +1114,5 @@ lead with unknowns. Vaccination in general: say you'd get / got it plus one conc
 Honest: no claim that boosters are proven necessary.
 Expect by next run: no more "nobody knows if boosters" / "case by case" in sampled replies; recent_6h reply neg <= 4 and
 pos >= 20; reply avg_replies >= 0.045. Revert the hint if reply avg_replies drops below 0.04 over a full 6 h window.
+Follow-up 02:45 UTC: first 10 writes after the 02:36 deploy all argued for the yearly shot, but 4 reused the hint's own
+words ("free and takes five minutes, like the flu jab"). Reworded the hint: own reason, own words, don't reuse that line.

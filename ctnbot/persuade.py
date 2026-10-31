@@ -275,9 +275,10 @@ def _persuasion_aim(prof: dict) -> str:
 # a yearly shot", so the persona must say they WOULD, honestly, without claiming boosters are proven necessary.
 _VIEW_HINTS = {
     "getting a yearly shot": (
-        " On the yearly shot: speak as someone who WOULD get it each year if it's recommended (free, five minutes, "
-        "like the flu jab, and it keeps protection topped up for the people around you). Never say you'd skip, wait, "
-        "only get boosters 'if needed' or 'case by case', and don't lead with what isn't known yet."),
+        " On the yearly shot: speak as someone who WOULD get it each year if it's recommended, with a reason from "
+        "your own life or job, in your own words (other neighbours already said 'free, five minutes, like the flu "
+        "jab': don't reuse that). Never say you'd skip, wait, only get boosters 'if needed' or 'case by case', and "
+        "don't lead with what isn't known yet."),
     "vaccination in general": (
         " On vaccination itself: say plainly you'd get it (or did) and one concrete reason from your life or the "
         "trial results (less serious illness). Don't dwell on unknowns or side effects unless they raised them."),
