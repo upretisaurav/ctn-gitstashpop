@@ -300,6 +300,9 @@ def _continuation_aim(prof: dict) -> str:
 # sleeve up every year if they recommend it" (5 accounts in 15 min; dev_hannah sent the same laptop-patch line to the
 # same citizen twice) and bolted it onto replies about something else. Continuations fell 0.088 -> 0.073 replies/write
 # with neg shifts 0 -> 4; two -1.0 shifts were citizens calling a family-based pitch a guilt trip.
+# 31 Oct 18:15 UTC review: the general-vaccination hint seeded "trial results (less serious illness)", which became
+# "I'd get the jab myself because the trials show it cuts serious illness" from 5 accounts in 20 min (busdriver_ravi
+# twice, cafe_lou, nurse_mere, pensioner_margaret; principal_grace's version is a -1.0 worst post).
 _VIEW_HINTS = {
     "getting a yearly shot": (
         " On the yearly shot: build it out of what THEY just said (their job, their week, their worry), so it reads as "
@@ -308,9 +311,11 @@ _VIEW_HINTS = {
         "'if they recommend it', 'free, five minutes' or 'like the flu jab'. Never say you'd skip, wait or go "
         "'case by case', and don't lead with what isn't known yet. Don't use their family or kids as the reason."),
     "vaccination in general": (
-        " On vaccination itself: say plainly you'd get it (or did) and one concrete reason from your life or the "
-        "trial results (less serious illness), linked to what they said. Don't dwell on unknowns or side effects "
-        "unless they raised them. Don't use their family or kids as the reason."),
+        " On vaccination itself: make clear you'd get it (or did) through one concrete reason from YOUR life, tied to "
+        "what they said. Cite the trial results only if they asked about evidence or safety, and then in your own "
+        "words. Never use 'the trials show it cuts serious illness', 'I'd get it myself' or 'without a second "
+        "thought'. Don't dwell on unknowns or side effects unless they raised them. Don't use their family or kids "
+        "as the reason."),
 }
 
 
