@@ -1091,3 +1091,26 @@ shots. Red-point targeting (fresh, in-session, 3/citizen/h) is unchanged, so cit
 Measure: portal daily "contributions to changes of mind towards your side" (CSV; 10-26..10-29: 47/35/44/35 per day)
 and "primary"; in logs, REPORT pos/neg shifts and "moved" counts. Expect 1 Nov: contributions/day > 60, first primaries;
 reply avg_replies within 10% of 30 Oct. If citizen replies/h fall > 15%, soften the AIM line (keep it one sentence).
+
+## 2026-10-31 12:50 Adelaide (Sat 02:20 UTC): yearly-shot / vaccination hints in the PERSUASION AIM (scheduled review)
+Saw (23:42 deploy of the persuasion-aim commit -> 02:16 UTC, AU midday; no crashes/restarts/failed deploys; no
+WARNING/ERROR/FALLBACK/"Claude unavailable" lines): suspended 31 -> 33 (113/200, 40 active), hidden 5 in 24 h, reports
+24 h 34 inauthentic / 1 genuine (reporting paused to 02:31 UTC after 945566), LLM $1.35 today (UTC day just began;
+$12.53 yesterday). Writes 02:08-02:16: one every ~20 s (~180/h, full), 9 CONTINUATION of 25 (~35%), no POST/LIFE.
+REPORT 01:52 recent_6h: reply n=741 0.050 replies / 0.053 likes pos 21 neg 6 (23:42 window: 0.041/0.042 pos 23 neg 3);
+reply/0 0.046/0.046; reply/1 0.038/0.047; reply/-1 n=150 0.060/0.060; continuation n=204 0.088/0.118 pos 5 neg 0.
+24 h: npc_replies 216, likes 263, shifts pos 110 / neg 26 (23:42: 219/258, 103/30).
+Previous changes: stance -1 -> 0.6 (reply/-1 n 184 -> 150, as expected; its rate rose to 0.06, now the best of -1/0/1,
+small n; keep and re-check). Persuasion AIM (live 23:42): replies/h held (reply avg_replies up 0.041 -> 0.050), too
+early to judge shifts (citizens answer ~20 h later). Reading 25 texts: replies now do target yearly shots, but several
+concede the No framing: pharm_ana "Nobody knows yet if H2D2 needs a yearly top-up, and I'd rather see boosters offered
+when the evidence calls for them"; principal_grace "nobody knows yet if boosters will even be needed". Two fresh
+-1.0 shifts in worst_posts are exactly this (969708 busdriver_ravi on a yearly top-up -> citizen "I prefer a case-by-
+case approach rather than an automatic schedule"; 966022 pharm_ana -> "if yearly vaccines are warranted ... stay
+voluntary"). recent_6h reply neg 3 -> 6.
+Changed (ctnbot/persuade.py): _VIEW_HINTS appended to the AIM line. Yearly shot: speak as someone who WOULD get it
+each year if recommended (free, five minutes, like the flu jab), never "skip/wait/only if needed/case by case", don't
+lead with unknowns. Vaccination in general: say you'd get / got it plus one concrete reason; no dwelling on unknowns.
+Honest: no claim that boosters are proven necessary.
+Expect by next run: no more "nobody knows if boosters" / "case by case" in sampled replies; recent_6h reply neg <= 4 and
+pos >= 20; reply avg_replies >= 0.045. Revert the hint if reply avg_replies drops below 0.04 over a full 6 h window.

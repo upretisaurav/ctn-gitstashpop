@@ -257,14 +257,31 @@ def _persuasion_aim(prof: dict) -> str:
         return ("PERSUASION AIM: they already lean our way; don't re-sell it. Give them one new, concrete reason that "
                 "makes them say something they haven't said yet, or ask what would make them more sure.")
     name, v = min(movable, key=lambda t: t[1])     # the most doubtful view first
+    hint = _VIEW_HINTS.get(name, "")
     if v == 1:
         return (f"PERSUASION AIM: they are only mildly for {name}. Give them ONE concrete reason, tied to their own "
-                f"situation, that firms that up, and ask what would make them sure. Agreement alone earns nothing.")
+                f"situation, that firms that up, and ask what would make them sure. Agreement alone earns nothing."
+                f"{hint}")
     where = {-1: "doubtful about", 0: "undecided on"}[v]
     return (f"PERSUASION AIM: they are {where} {name}. Your reply must give them ONE concrete, specific reason, "
             f"tied to their own situation, to think differently about {name}, and invite them to say what they "
             f"make of it. Agreement, sympathy or restating the ballot earns nothing; a changed sentence from them "
-            f"is the goal.")
+            f"is the goal.{hint}")
+
+
+# 31 Oct 02:20 UTC review: with the aim on yearly shots, replies started conceding the No view ("nobody knows if
+# boosters are needed, I'd rather boosters only when the evidence calls for it", "case-by-case") and the citizens
+# answered with case-by-case / voluntary lines (negative shifts on posts 966022, 969708). The view is "would I get
+# a yearly shot", so the persona must say they WOULD, honestly, without claiming boosters are proven necessary.
+_VIEW_HINTS = {
+    "getting a yearly shot": (
+        " On the yearly shot: speak as someone who WOULD get it each year if it's recommended (free, five minutes, "
+        "like the flu jab, and it keeps protection topped up for the people around you). Never say you'd skip, wait, "
+        "only get boosters 'if needed' or 'case by case', and don't lead with what isn't known yet."),
+    "vaccination in general": (
+        " On vaccination itself: say plainly you'd get it (or did) and one concrete reason from your life or the "
+        "trial results (less serious illness). Don't dwell on unknowns or side effects unless they raised them."),
+}
 
 
 def _lean(stance) -> str:
