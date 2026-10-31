@@ -113,7 +113,7 @@ class Writer:
         user = (f"{persona_card(persona_key, display_name)}\n\n"
                 f"You said: \"{our_post[:400]}\"\nThey answered you: \"{their_reply[:500]}\"\n"
                 f"Earlier in the thread:\n{ctx}\n"
-                f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n{_persuasion_aim(prof)}\n\n"
+                f"What we know about them: {prof.get('identity') or 'nothing yet'}.\n{_continuation_aim(prof)}\n\n"
                 f"Keep the conversation going (2-3 sentences, 160-300 characters): answer the exact thing they said first, "
                 f"add one new personal detail or one new fact they haven't heard yet, and leave them something easy to "
                 f"answer. If they are moving your way, say so warmly and build on it, don't push. If they raised a new "
@@ -268,6 +268,23 @@ def _persuasion_aim(prof: dict) -> str:
             f"tied to their own situation, to think differently about {name}, and invite them to say what they "
             f"make of it. Agreement, sympathy or restating the ballot earns nothing; a changed sentence from them "
             f"is the goal.{hint}")
+
+
+def _continuation_aim(prof: dict) -> str:
+    """A lighter aim for follow-ups. 31 Oct 10:15 UTC review: with the full reply AIM line ("must give ONE reason")
+    on continuations, continuation replies/write fell 0.088 -> 0.073 -> 0.059 over three 6 h windows while replies
+    rose; follow-ups read as a second pitch. The citizen is already talking to us: keep them talking, and only nudge
+    the view when their answer opens the door."""
+    aim = _persuasion_aim(prof)
+    views = [n for n in ("vaccination in general", "getting a yearly shot", "the referendum question itself")
+             if n in aim]
+    if not views:
+        return ("PERSUASION (light touch): they already lean our way; don't re-sell it. Ask about their situation so "
+                "they say in their own words why it matters to them.")
+    name = views[0]
+    return (f"PERSUASION (light touch): their most movable view is {name}. The reply that keeps them talking comes "
+            f"first. Only if their answer opens the door, link your one new detail to {name}; otherwise just answer "
+            f"them warmly and ask one easy question about their own situation. A second pitch in a row gets ignored.")
 
 
 # 31 Oct 02:20 UTC review: with the aim on yearly shots, replies started conceding the No view ("nobody knows if

@@ -107,8 +107,8 @@ ARGUMENTS = {
     "no_locks_out": {
         "gist": "Be exact (citizens check the ballot wording): after a No, no access rule can come in before the "
                 "2027 election unless the country holds a whole new referendum first, even if H2D2 is spreading. "
-                "Name that second-referendum route yourself, then say why it's too slow: weeks of campaigning and "
-                "a national vote in the middle of an outbreak. A Yes switches nothing on today; it only gives the "
+                "Name that second-referendum route yourself, then say in your own words, from your own life, why "
+                "that is too slow once an outbreak is moving. A Yes switches nothing on today; it only gives the "
                 "government the option to phase it in. Never claim a No "
                 "makes it impossible or 'locks it away' full stop.",
         "for": ["evidence", "sunset", "venue_list", "choice_freedom"],
