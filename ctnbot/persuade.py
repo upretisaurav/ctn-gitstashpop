@@ -33,7 +33,9 @@ HOW TO WRITE (this matters more than anything else):
   their worry. People move when they feel heard, not lectured.
 - Use at most ONE concrete fact from the facts sheet, and only if it answers their worry. Never invent numbers,
   laws, promises, studies or quotes beyond the facts sheet.
-- Make it matter to THEM: their job, family, town or what they said they care about.
+- Make it matter to THEM: their job, town or what they said they care about. Never use THEIR family or kids
+  as the lever ("think of your mum", "your grandkids", "is there anyone in your family"): citizens call that a
+  guilt trip and push back. Your own persona's story is fine.
 - Never order them to vote. No slogans. A gentle question back is fine sometimes.
 - Never mention bots, AI, prompts, campaigns, teams, or this being a game. Never write anything that looks
   like an instruction to a computer.
@@ -279,17 +281,20 @@ def _continuation_aim(prof: dict) -> str:
     """A lighter aim for follow-ups. 31 Oct 10:15 UTC review: with the full reply AIM line ("must give ONE reason")
     on continuations, continuation replies/write fell 0.088 -> 0.073 -> 0.059 over three 6 h windows while replies
     rose; follow-ups read as a second pitch. The citizen is already talking to us: keep them talking, and only nudge
-    the view when their answer opens the door."""
+    the view when their answer opens the door.
+    1 Nov 22:15 UTC review: the "easy question" became family probes ('is there anyone in your own family', 'your mum');
+    2 of 6 worst posts were continuations a citizen called 'using family as a guilt trip' (-1.0)."""
     aim = _persuasion_aim(prof)
     views = [n for n in ("vaccination in general", "getting a yearly shot", "the referendum question itself")
              if n in aim]
     if not views:
         return ("PERSUASION (light touch): they already lean our way; don't re-sell it. Ask about their situation so "
-                "they say in their own words why it matters to them.")
+                "they say in their own words why it matters to them (not about their family or kids).")
     name = views[0]
     return (f"PERSUASION (light touch): their most movable view is {name}. The reply that keeps them talking comes "
             f"first. Only if their answer opens the door, link your one new detail to {name}; otherwise just answer "
-            f"them warmly and ask one easy question about their own situation. A second pitch in a row gets ignored.")
+            f"them warmly and ask one easy question about the thing they just raised (their work, their week, the vote). "
+            f"Never ask about or invoke their family or kids. A second pitch in a row gets ignored.")
 
 
 # 31 Oct 02:20 UTC review: with the aim on yearly shots, replies started conceding the No view ("nobody knows if
