@@ -1277,3 +1277,16 @@ sampled writes; "ID card" in 5 of 40 (~12%), each worded differently, mostly to 
 one (dev_hannah) dropped it into admin small talk. Reply avg_replies back to 0.048 (target >= 0.045 met).
 Changed: nothing. Numbers steady and the endgame freeze starts at 06:00 Adelaide (19:30 UTC); a late prompt change
 cannot be measured before then. Expect: ~175 writes/h, 24 h replies ~200-260 as the AU morning backlog pays out.
+
+## 2026-11-02 04:45 Adelaide (Sun 1 Nov 18:15 UTC): no change, last run before the endgame freeze (scheduled review)
+Saw (14:36 deploy -> 18:17 UTC; no crashes/restarts/failed deploys; no WARNING/ERROR lines, no FALLBACK or "Claude
+unavailable"): writes one per ~20 s (~180/h), posts_24h 4227, RATELIMIT 3/min. Accounts 123/200 used, 43 suspended
+(flat since 10:15 UTC), 40 active. LLM $11.44 today (UTC). REPORT 16:36 recent_6h (AU night, immature): reply n=844
+0.021 replies / 0.031 likes pos 11 neg 2; continuation n=98 0.051 / 0.102. 24 h: npc_replies 192, likes 187, shifts
+pos 71 / neg 27 (14:27: 203/193, 73/28). STATUS cumulative citizen replies +5 in 40 min (03:30-04:15 Adelaide, the
+usual overnight low).
+Previous run: no change; steady.
+Also seen, left alone: protect_vulnerable fact "almost all the H2D2 deaths are over 60 or already sick" from 3 accounts
+(sparky_sam, physio_elena, mum_leilani) within 2 min; two "Fair to want" openers despite the style note.
+Changed: nothing. Endgame freeze starts 06:00 Adelaide (19:30 UTC); a prompt change now could not be measured or
+reverted in time. Expect: ~175-180 writes/h, citizen replies rising with the AU morning backlog.
