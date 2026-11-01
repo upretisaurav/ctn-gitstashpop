@@ -124,9 +124,14 @@ ARGUMENTS = {
         "for": ["tourism", "jobs_income", "lockdown_memory", "choice_freedom", "enforcement_burden"],
     },
     "privacy_separate": {
-        "gist": "The certificate is separate from the national ID card, and the ID-card law bans health records on "
-                "the card. Push for privacy rules in the regulations - that's a fight you can win after a Yes.",
-        "for": ["privacy", "choice_freedom"],
+        # 1 Nov 02:30 UTC: the old gist ("certificate separate from the ID card, ID-card law bans health records on
+        # the card") was recited near-verbatim by 5+ accounts in 10 min, and "choice_freedom" sent it to citizens
+        # who never raised privacy (it introduced a No-side worry). Now privacy-only, and the writer picks ONE detail.
+        "gist": "Only because they raised privacy: answer it with ONE plain detail in your own words (e.g. it's a health "
+                "certificate from the health ministry, kept apart from the new ID card, which by law can't hold "
+                "health records), then your own reason for backing Yes. Don't recite the ID-card law "
+                "wording, and don't tell them to fight for it later.",
+        "for": ["privacy"],
     },
     "protect_vulnerable": {
         "gist": "Almost all H2D2 deaths are people over 60 or already ill - our parents, nans, neighbours on oxygen. "
