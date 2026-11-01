@@ -127,10 +127,12 @@ ARGUMENTS = {
         # 1 Nov 02:30 UTC: the old gist ("certificate separate from the ID card, ID-card law bans health records on
         # the card") was recited near-verbatim by 5+ accounts in 10 min, and "choice_freedom" sent it to citizens
         # who never raised privacy (it introduced a No-side worry). Now privacy-only, and the writer picks ONE detail.
-        "gist": "Only because they raised privacy: answer it with ONE plain detail in your own words (e.g. it's a health "
-                "certificate from the health ministry, kept apart from the new ID card, which by law can't hold "
-                "health records), then your own reason for backing Yes. Don't recite the ID-card law "
-                "wording, and don't tell them to fight for it later.",
+        # 1 Nov 10:30 UTC: the example clause above became the new formula ("On privacy, the proof is just a health
+        # ministry certificate, paper or digital, ... separate from the new ID card", 5+ accounts in 2 h). No example now.
+        "gist": "Only because they raised privacy: deal with it in one short clause inside a sentence about their exact "
+                "worry (the certificate is a health-ministry thing, not part of the ID card), never as your opener "
+                "and never 'On privacy, the proof is...' or 'paper or digital'. Spend the rest on your own reason "
+                "for backing Yes. Don't recite the ID-card law, and don't tell them to fight for it later.",
         "for": ["privacy"],
     },
     "protect_vulnerable": {
