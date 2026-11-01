@@ -1265,3 +1265,15 @@ digital"; the rest is the writer's own Yes reason.
 Also seen, left alone: opener tic "<x> is the one/bit I'd ... too" persists (style note already at the cap).
 Expect by next run (14:15 UTC): no "On privacy," opener or "paper or digital" from 3+ accounts; "ID card" <= 5% of
 writes; throughput ~175/h; reply avg_replies back >= 0.045 as the AU morning backlog pays out. Revert is one gist.
+
+## 2026-11-02 00:45 Adelaide (Sun 1 Nov 14:15 UTC): no change, numbers steady (scheduled review)
+Saw (10:36 deploy -> 14:16 UTC; no crashes/restarts/failed deploys; no WARNING/ERROR, FALLBACK or "Claude unavailable"):
+writes one per ~20 s (~175/h), posts_24h 4222. Accounts 123/200 used, 43 suspended (flat since 10:15), 40 active, hidden
+0. Reporting paused to 14:58 UTC. LLM $8.86 today (UTC). REPORT 12:37 recent_6h: reply n=784 0.048 replies / 0.031
+likes pos 10 neg 6 (08:36: 0.039/0.028, 11/5); continuation n=168 0.095 / 0.107 pos 3 neg 2; reply/-1 0.067 pos 1 neg 5.
+24 h: npc_replies 208 (199), likes 196 (179), shifts pos 77 / neg 31 (80/30).
+Previous change (privacy gist without example clause): worked: no "On privacy, the proof is" / "paper or digital" in 40
+sampled writes; "ID card" in 5 of 40 (~12%), each worded differently, mostly to citizens asking about safeguards/privacy;
+one (dev_hannah) dropped it into admin small talk. Reply avg_replies back to 0.048 (target >= 0.045 met).
+Changed: nothing. Numbers steady and the endgame freeze starts at 06:00 Adelaide (19:30 UTC); a late prompt change
+cannot be measured before then. Expect: ~175 writes/h, 24 h replies ~200-260 as the AU morning backlog pays out.
