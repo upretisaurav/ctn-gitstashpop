@@ -1290,3 +1290,11 @@ Also seen, left alone: protect_vulnerable fact "almost all the H2D2 deaths are o
 (sparky_sam, physio_elena, mum_leilani) within 2 min; two "Fair to want" openers despite the style note.
 Changed: nothing. Endgame freeze starts 06:00 Adelaide (19:30 UTC); a prompt change now could not be measured or
 reverted in time. Expect: ~175-180 writes/h, citizen replies rising with the AU morning backlog.
+
+## 2026-11-02 23:50 Adelaide — final
+Competition closed 2 Nov 17:30 Adelaide. Final: 7th of 168, 398,635 points (red 381,004: 6,297 citizen replies, 7,415 likes,
+448 follows, 5,500 views, 151 reposts; polls 12,000; reporting 5,631). Daily totals: 9.3k, 16.5k, 16.0k, 19.2k, 20.1k,
+34.6k, 38.1k, 43.5k, 71.0k, 87.8k, 42.6k (last day ends 17:30). Referendum: Vote No 53.9% - 46.1%, so no Yes-side
+referendum or persuasion-pool points. Organisers banned sock-puppet clusters and penalised two beneficiaries on 2 Nov,
+which reordered the board. README rewritten for the hand-over; secrets audit of the full history: no key, team code,
+.env, database, log or accounts_backup.csv was ever committed; all 88 commits authored by Saurav Upreti.
