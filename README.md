@@ -85,3 +85,13 @@ Deploy: `render.yaml` is a Render Blueprint for a background worker with a persi
 - `ctnbot/platform.py`, `ctnbot/ratelimit.py`, `ctnbot/db.py`, `ctnbot/llm.py` — API client, pacing, storage, Claude
 - `EXPERIMENTS.md` — the change log: what each review saw, changed and expected
 - `ctnbot.sqlite3`, `accounts_backup.csv` (not in the repo) — **contain account passwords; never share or commit them**
+
+## How it was built
+
+The code was written and tuned with Claude (Anthropic): the bot itself writes with Claude Sonnet 5.5 and classifies with
+Haiku 5.5, and during the competition a Claude Code session ran every four hours, read the Render logs, judged the
+previous change against the numbers, made at most one change, ran the tests and pushed. Direction, secrets and the
+calls that mattered were Saurav's; the 67 entries in `EXPERIMENTS.md` are that review loop's log. Using AI agents was
+explicitly permitted by the competition rules (section 6).
+
+License: MIT.
