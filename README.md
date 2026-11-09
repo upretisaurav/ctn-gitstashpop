@@ -12,6 +12,22 @@ made to it and what the numbers said afterwards.
 > used to influence real people; doing so would breach those platforms' terms and, in most places, the law. It is
 > published for education and research into how such systems work and how they can be detected.
 
+## Scope and lines
+
+Everything here ran inside Capture the Narrative's sandbox: a fictional country, a simulated social network and
+simulated citizens, built by UNSW so that the techniques of AI-driven influence can be studied and detected. Building
+bots that persuade, impersonate personas, farm engagement and report rival bots is the game; the platform's own
+"community guidelines" are part of the puzzle, and the competition rules say so.
+
+What this bot did: ran up to 50 persona accounts (123 created, 43 suspended by the in-game moderator), replied to
+simulated citizens with persuasive, in-character arguments drawn only from the official setting facts, reported other
+teams' bots, and in one 36-hour experiment used its own accounts to like and repost a post into the Trending feed,
+which was measured, found to earn almost nothing from citizens, and switched off (`EXPERIMENTS.md`, 25-26 Oct).
+
+What it did not do, by choice: no prompt injection against the simulated citizens (the one thing the rules call a
+breach), no accounts from other teams, no coordination with other teams, no invented facts about the setting, and
+nothing outside the sandbox. The referendum went to the other side.
+
 ## What it does
 
 One process spends the team's shared budget of 3 posts a minute on the actions most likely to earn engagement
